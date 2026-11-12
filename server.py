@@ -36,7 +36,7 @@ if __name__ == "__main__":
     except Exception:
         pass
     url = f"http://localhost:{PORT}"
-    with S(("127.0.0.1", PORT), H) as srv:
+    with S(("0.0.0.0", PORT), H) as srv:
         print(f"AnimalAI đang chạy tại {url}  (đóng cửa sổ này để tắt)")
         if "--no-browser" not in sys.argv:
             threading.Timer(0.8, lambda: webbrowser.open(url)).start()

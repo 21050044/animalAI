@@ -6,12 +6,10 @@ import { sfx, toast, confetti } from "../fx.js";
 
 let ctx, inited = false, conf = DEFAULT_CONF, enabled = new Set(), source = null, isVideo = false, busy = false, raf = 0, lastBoxes = [], videoUrl = null;
 const MISSIONS = [
-  { k: "web", t: "Nhận diện 1 ảnh bạn tự tìm trên mạng" },
+  { k: "web", t: "Cho AI xem 1 ảnh bạn tự tìm trên mạng" },
   { k: "three", t: "Tìm ảnh có từ 3 con vật trở lên" },
-  { k: "mix", t: "Ảnh có 2 loài khác nhau cùng lúc" },
-  { k: "video", t: "Cho AI xem một video" },
-  { k: "low", t: "Kéo ngưỡng xuống dưới 15%: chuyện gì xảy ra?" },
-  { k: "fool", t: "Đánh lừa được AI (đoán sai / bỏ sót), bấm để đánh dấu", manual: true },
+  { k: "low", t: "Kéo thanh “chắc chắn” xuống dưới 15%: chuyện gì xảy ra?" },
+  { k: "fool", t: "Lừa được AI (đoán sai hoặc bỏ sót): bấm vào đây để đánh dấu", manual: true },
 ];
 
 function renderMissions() {
@@ -70,15 +68,10 @@ function renderCounts(res) {
   const changed = sig !== lastSig || !isVideo; lastSig = sig;
   if (changed) el.innerHTML = "";
   if (!changed) { /* giữ nguyên danh sách, chỉ cập nhật số liệu bên dưới */ }
-  else if (!keys.length) el.append(h("div", { class: "muted" }, "Không thấy con vật nào (trong các lớp đang bật)."));
+  else if (!keys.length) el.append(h("div", { class: "muted" }, "Không thấy con vật nào (trong các loài đang bật)."));
   if (changed) for (const id of keys) { const c = byId[id]; el.append(h("div", { class: "cnt", style: `--c:${c.color}` }, h("span", { class: "ce" }, c.emoji), h("b", {}, `×${cnt[id]}`), h("span", {}, c.vi))); }
-  const st = res.stats;
-  $("#dt-pipe").innerHTML = `<div class="pp"><b>${st.raw.toLocaleString("vi-VN")}</b><span>ô dự đoán</span></div><div class="pa">→</div>
-    <div class="pp"><b>${st.passed}</b><span>vượt ngưỡng ${Math.round(conf * 100)}%</span></div><div class="pa">→</div>
-    <div class="pp"><b>${st.kept}</b><span>sau khi lọc trùng (NMS)</span></div>`;
-  $("#dt-ms").textContent = `⚡ ${Math.round(res.ms)} ms/lần · ${Math.round(1000 / res.ms)} khung hình/giây`;
+  $("#dt-ms").textContent = `⚡ AI xem xong trong ${(res.ms / 1000).toFixed(2).replace(".", ",")} giây`;
   if (res.boxes.length >= 3) mission("three");
-  if (keys.length >= 2) mission("mix");
   if (conf < 0.15) mission("low");
 }
 
@@ -91,7 +84,7 @@ async function runImage() {
   g.drawImage(source, 0, 0, w * k, hh * k);
   drawBoxes(g, res.boxes, k);
   renderCounts(res);
-  ctx.status(res.boxes.length ? `AI tìm thấy ${res.boxes.length} con vật.` : "AI không thấy con vật nào. Thử hạ ngưỡng xem?");
+  ctx.status(res.boxes.length ? `AI tìm thấy ${res.boxes.length} con vật.` : "AI không thấy con vật nào. Thử kéo thanh “chắc chắn” xuống thấp hơn xem?");
 }
 
 function videoLoop() {
@@ -124,7 +117,7 @@ async function openSource(src, kind, fromUser) {
     await v.play().catch(() => {});
     $("#dt-play").hidden = false; $("#dt-play").textContent = "⏸";
     lastSig = ""; ctx.status("🎬 AI đang xem video: mỗi khung hình được nhận diện lại từ đầu.");
-    mission("video"); if (fromUser) mission("web");
+    if (fromUser) mission("web");
     videoLoop();
   } else {
     isVideo = false; $("#dt-play").hidden = true;
@@ -135,7 +128,7 @@ async function openSource(src, kind, fromUser) {
   sfx.lock();
 }
 
-function close() { stop(); source = null; isVideo = false; $("#dt-view").hidden = true; $("#dt-drop").hidden = false; $("#dt-counts").innerHTML = `<span class="muted">Chưa có ảnh</span>`; $("#dt-pipe").innerHTML = ""; }
+function close() { stop(); source = null; isVideo = false; $("#dt-view").hidden = true; $("#dt-drop").hidden = false; $("#dt-counts").innerHTML = `<span class="muted">Chưa có ảnh</span>`; }
 
 function handleFiles(files) {
   const f = [...files].find((x) => x.type.startsWith("image/") || x.type.startsWith("video/"));
@@ -148,7 +141,7 @@ function renderGallery() {
   const act = new Set(classes().map((c) => c.key));
   const on = S.data.multi.filter((x) => act.has(x.cls)), off = S.data.multi.filter((x) => !act.has(x.cls));
   // ảnh lớp đang bật trước; sau đó 2 ảnh "bẫy" gấu bông + 2 ảnh loài chưa bật (để thảo luận: vì sao AI không thấy?)
-  const items = [...on.map((x) => [x.file, ""]), ...S.data.trash.slice(0, 2).map((x) => [x.file, "🧸 bẫy"]), ...off.slice(0, 2).map((x) => [x.file, "lớp tắt"])];
+  const items = [...on.map((x) => [x.file, ""]), ...S.data.trash.slice(0, 2).map((x) => [x.file, "🧸 bẫy"]), ...off.slice(0, 2).map((x) => [x.file, "loài chưa học"])];
   for (const [f, tag] of items) g.append(h("button", { class: "gi", title: tag, onclick: () => openSource(imgUrl(f), "image") },
     h("img", { src: imgUrl(f), loading: "lazy" }), tag ? h("span", { class: "gt" }, tag) : null));
 }
@@ -156,8 +149,8 @@ function renderGallery() {
 export default {
   id: "detect", icon: "🎯", title: "Nhận diện",
   blurb: "Dùng AI thật trên ảnh/video của bạn",
-  hint: "Kéo ảnh/video vào, hoặc copy ảnh trên mạng rồi Ctrl+V.",
-  guide: { title: "Bước 5: AI đi làm nhiệm vụ!", text: "Đây là mô hình <b>YOLO thật</b> chạy ngay trên máy bạn. Hãy lên mạng tìm <b>ảnh hoặc video</b> động vật, <b>kéo thả vào</b> (hoặc copy ảnh rồi <kbd>Ctrl</kbd>+<kbd>V</kbd>). Hoàn thành các <b>thử thách</b> bên phải!" },
+  hint: "Bấm một ảnh mẫu bên dưới để thử ngay, hoặc đưa ảnh của bạn vào.",
+  guide: { title: "Bước 5: AI đi làm nhiệm vụ!", text: "Đây là <b>AI thật</b> chạy ngay trên máy bạn. Bấm một <b>ảnh mẫu</b> để thử ngay. Sau đó lên mạng tìm ảnh động vật, <b>sao chép ảnh</b> rồi nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> ở đây. Làm thử các <b>thử thách</b> bên phải!" },
   enter(c) {
     ctx = c;
     if (!inited) {
@@ -187,7 +180,7 @@ export default {
       renderGallery();
     }
     renderChips(); renderMissions();
-    ctx.complete("Hoàn thành thử thách rồi bấm 🎓 Nhận chứng nhận.");
+    ctx.complete("Thử vài ảnh rồi bấm 🎓 Nhận chứng nhận.");
   },
   leave() { stop(); if (isVideo) close(); },
 };

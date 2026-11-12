@@ -10,7 +10,7 @@ const MODELS = {
   s: { vi: "Small", sub: "9,4 triệu", base: 0.86, slow: 1.15, speed: 2.6 },
   m: { vi: "Medium", sub: "20 triệu", base: 0.89, slow: 1.35, speed: 6.5 },
 };
-const INITS = { pre: { vi: "Từ YOLO đã học sẵn", sub: "transfer learning" }, scratch: { vi: "Từ con số 0", sub: "tay trắng" } };
+const INITS = { pre: { vi: "Từ AI đã biết nhìn", sub: "học tiếp" }, scratch: { vi: "Từ con số 0", sub: "chưa biết gì" } };
 const EPOCHS = [10, 25, 50];
 const opt = { model: "n", init: "pre", ep: 25, aug: true };
 let ctx, running = false, imgCache = new Map(), inited = false;
@@ -23,7 +23,6 @@ function seg(el, items, key) {
   }
 }
 function renderOpts() {
-  seg($("#tr-model"), Object.entries(MODELS), "model");
   seg($("#tr-init"), Object.entries(INITS), "init");
   seg($("#tr-ep"), EPOCHS.map((e) => [e, { vi: String(e) }]), "ep");
   seg($("#tr-aug"), [[true, { vi: "Bật" }], [false, { vi: "Tắt" }]], "aug");
@@ -35,16 +34,14 @@ function renderNet() {
   const blk = (id, icon, t, sub, extra) => h("div", { class: "nb", id }, h("div", { class: "nb-i" }, icon), h("div", {}, h("b", {}, t), h("div", { class: "muted small" }, sub)), extra || null);
   const fm = h("div", { class: "fmaps" }, ...[0, 1, 2].map((i) => { const c = h("canvas", { class: "fm" }); c.width = c.height = 56; c.dataset.i = i; return c; }));
   el.append(
-    blk("nb-in", "🖼️", "Ảnh đầu vào", "lô 16 ảnh · 640×640"),
+    blk("nb-in", "🖼️", "1. Xem ảnh", "mỗi lượt 16 ảnh"),
     h("div", { class: "nflow" }),
-    blk("nb-bb", "👁️", "Backbone: “đôi mắt”", "nhìn nét → hình dạng → bộ phận", fm),
+    blk("nb-bb", "👁️", "2. Nhìn", "nét → hình dạng → bộ phận", fm),
     h("div", { class: "nflow" }),
-    blk("nb-nk", "🔗", "Neck", "ghép thông tin vật to + vật nhỏ"),
+    blk("nb-hd", "🎯", "3. Đoán", "con gì? nằm ở đâu?"),
     h("div", { class: "nflow" }),
-    blk("nb-hd", "🎯", "Head: dự đoán", "8.400 khung · mỗi khung chọn 1 lớp"),
-    h("div", { class: "nflow" }),
-    blk("nb-ls", "📏", "So với đáp án → sai số", "khung lệch bao nhiêu? đoán đúng lớp không?"),
-    h("div", { class: "nback", id: "nb-back" }, "⟲ Lan truyền ngược: chỉnh ", h("b", { id: "nb-params" }, MODELS[opt.model].sub), " trọng số cho bớt sai"),
+    blk("nb-ls", "📏", "4. So với đáp án", "đoán sai nhiều hay ít?"),
+    h("div", { class: "nback", id: "nb-back" }, "⟲ 5. Tự sửa: chỉnh ", h("b", { id: "nb-params" }, "2,6 triệu con số"), " bên trong để lần sau bớt sai"),
   );
 }
 
@@ -81,7 +78,7 @@ function chart(canvas, series, { ymax = 1, ymin = 0, xmax = 10, fmt = (v) => v.t
   const W = (canvas.width = canvas.clientWidth * devicePixelRatio), H = (canvas.height = canvas.clientHeight * devicePixelRatio);
   const g = canvas.getContext("2d"); g.clearRect(0, 0, W, H);
   const p = 30 * devicePixelRatio, X = (x) => p + (x / xmax) * (W - p * 1.4), Y = (y) => H - p * 0.8 - ((y - ymin) / (ymax - ymin)) * (H - p * 1.4);
-  g.strokeStyle = "rgba(148,163,184,.18)"; g.lineWidth = 1; g.font = `${10 * devicePixelRatio}px system-ui`; g.fillStyle = "#94a3b8";
+  g.strokeStyle = "rgba(100,116,139,.22)"; g.lineWidth = 1; g.font = `${10 * devicePixelRatio}px system-ui`; g.fillStyle = "#6b7280";
   for (let i = 0; i <= 4; i++) { const v = ymin + ((ymax - ymin) * i) / 4; g.beginPath(); g.moveTo(p, Y(v)); g.lineTo(W - p * 0.4, Y(v)); g.stroke(); g.fillText(fmt(v), 2, Y(v) + 3); }
   g.fillText("vòng " + xmax, W - p * 1.8, H - 4);
   let lx = p;
@@ -154,13 +151,6 @@ async function run() {
   running = true; $("#tr-go").disabled = true; $("#tr-result").innerHTML = ""; sfx.go();
   renderNet();
   const sim = simulate(), E = opt.ep, m = MODELS[opt.model];
-  const log = $("#tr-log");
-  log.innerHTML = "";
-  const L = (s, cls = "") => { log.append(h("div", { class: cls }, s)); log.scrollTop = log.scrollHeight; };
-  L(`$ yolo train model=yolo11${opt.model}${opt.init === "pre" ? ".pt" : ".yaml"} data=dong_vat.yaml epochs=${E} imgsz=640${opt.aug ? "" : " augment=False mosaic=0"}`, "cmd");
-  L(`Dữ liệu: ${(S.trainFiles || []).length} ảnh huấn luyện, ${(S.valFiles || []).length} ảnh kiểm tra, ${classes().length} lớp`);
-  L(opt.init === "pre" ? "Nạp trọng số đã học từ COCO (330.000 ảnh) ✓" : "Khởi tạo trọng số NGẪU NHIÊN (mô hình chưa biết gì)");
-  L("   Vòng   box_loss   cls_loss   mAP50", "hd");
   const vals = (S.valFiles?.length ? S.valFiles : S.pool.map((x) => x.file)).slice(0, 4).map((f) => S.pool.find((x) => x.file === f)).filter(Boolean);
   while (vals.length < 4) vals.push(S.pool[vals.length]);
   const vgrid = $("#tr-val"); vgrid.innerHTML = "";
@@ -168,31 +158,29 @@ async function run() {
   const ims = await Promise.all(vals.map((v) => img(v.file)));
   const trainSet = S.pool;
   const dur = Math.min(1100 * m.slow, 32000 / E);
-  const blocks = ["nb-in", "nb-bb", "nb-nk", "nb-hd", "nb-ls"];
+  const blocks = ["nb-in", "nb-bb", "nb-hd", "nb-ls"];
   const r = rng(11);
   for (let e = 1; e <= E; e++) {
     $("#tr-epoch").textContent = `· vòng ${e}/${E}`;
     // lượt đi
     const it = trainSet[(e * 7) % trainSet.length];
     featureMaps(await img(it.file), it, sim.map[e - 1] / Math.max(0.3, sim.final));
-    for (const b of blocks) { document.getElementById(b)?.classList.add("act"); await sleep(dur / 9); }
+    for (const b of blocks) { document.getElementById(b)?.classList.add("act"); await sleep(dur / 7); }
     $("#nb-back").classList.add("act"); sfx.tick();
     await sleep(dur / 4);
     blocks.forEach((b) => document.getElementById(b)?.classList.remove("act")); $("#nb-back").classList.remove("act");
     // cập nhật số liệu
     chart($("#tr-loss"), [
-      { name: "huấn luyện", color: "#38bdf8", data: sim.box.slice(0, e) },
-      { name: "kiểm tra", color: "#f472b6", data: sim.vbox.slice(0, e), dash: true },
+      { name: "ảnh đã học", color: "#0284c7", data: sim.box.slice(0, e) },
+      { name: "ảnh kiểm tra", color: "#db2777", data: sim.vbox.slice(0, e), dash: true },
     ], { ymax: 2.6, ymin: 0, xmax: E });
-    chart($("#tr-map"), [{ name: "mAP50", color: "#34d399", data: sim.map.slice(0, e) }], { ymax: 1, xmax: E, fmt: (v) => Math.round(v * 100) + "%" });
+    chart($("#tr-map"), [{ name: "điểm", color: "#059669", data: sim.map.slice(0, e) }], { ymax: 1, xmax: E, fmt: (v) => Math.round(v * 100) + "%" });
     const p = Math.min(1, sim.map[e - 1] / 0.85);
     vals.forEach((v, i) => drawVal(vcs[i], ims[i], p < 0.15 ? [predictBox(v, p, r), predictBox(v, p, r)] : [predictBox(v, p, r)]));
-    L(`${String(e).padStart(4)}/${E}    ${sim.box[e - 1].toFixed(3)}      ${sim.cls[e - 1].toFixed(3)}     ${sim.map[e - 1].toFixed(3)}`);
-    if (!opt.aug && e === 22) L("⚠ Sai số trên ảnh KIỂM TRA đang tăng trở lại → mô hình bắt đầu học vẹt!", "warn");
+    if (!opt.aug && e === 22) ctx.status("⚠ Mức sai trên ảnh kiểm tra đang tăng trở lại: AI bắt đầu học vẹt!");
   }
-  L(`Đã lưu mô hình: runs/detect/train${S.runs.length + 1}/weights/best.pt ✓`, "ok");
   finish(sim);
-  running = false; $("#tr-go").disabled = false; $("#tr-go").textContent = "↻ Huấn luyện lại (đổi cài đặt)";
+  running = false; $("#tr-go").disabled = false; $("#tr-go").textContent = "↻ Huấn luyện lại";
 }
 
 function finish(sim) {
@@ -203,38 +191,36 @@ function finish(sim) {
   if (!S.best || run.map > S.best.map) S.best = run;
   const grade = pct >= 75 ? ["🏆", "Xuất sắc"] : pct >= 60 ? ["🥈", "Khá tốt"] : pct >= 35 ? ["🥉", "Tạm được"] : ["😵", "Chưa dùng được"];
   const tips = [];
-  if (opt.init === "scratch") tips.push("🧊 <b>Học từ con số 0</b> với vài chục ảnh là quá ít! YOLO thật cần hàng trăm nghìn ảnh. Kỹ sư dùng <b>transfer learning</b>: bắt đầu từ mô hình đã biết nhìn.");
-  if (!opt.aug && opt.ep > 20) tips.push("🦜 <b>Học vẹt (overfitting)</b>: đường sai số kiểm tra (nét đứt) đi lên lại, vì AI thuộc lòng ảnh luyện tập chứ không hiểu.");
-  if (opt.ep === 10) tips.push("⏱ <b>Học chưa đủ</b>: 10 vòng hơi ít, đường mAP vẫn còn đang đi lên.");
-  if (opt.model === "m") tips.push(`🐢 Mô hình Medium chính xác hơn nhưng <b>chậm hơn ~${m.speed} lần</b>, khó chạy trên camera giá rẻ.`);
-  if (sim.q.q < 0.75) tips.push(`🏷 Chất lượng nhãn của bạn (${Math.round(sim.q.q * 100)}%) kéo điểm xuống: <b>nhãn sai → AI sai</b>.`);
-  if (!tips.length) tips.push("✨ Cấu hình rất chuẩn: transfer learning + tăng cường + đủ số vòng.");
+  if (opt.init === "scratch") tips.push("🧊 <b>Học từ con số 0</b> với vài chục ảnh là quá ít! Muốn vậy phải có hàng trăm nghìn ảnh. Kỹ sư thường cho AI <b>học tiếp từ một AI đã biết nhìn</b>.");
+  if (!opt.aug && opt.ep > 20) tips.push("🦜 <b>Học vẹt</b>: đường mức sai trên ảnh kiểm tra (nét đứt) đi lên lại, vì AI thuộc lòng ảnh đã học chứ không hiểu.");
+  if (opt.ep === 10) tips.push("⏱ <b>Học chưa đủ</b>: 10 vòng hơi ít, đường điểm vẫn còn đang đi lên.");
+  if (sim.q.q < 0.75) tips.push(`🏷 Nhãn và khung bạn làm ở bước 1–2 chưa chuẩn (${Math.round(sim.q.q * 100)}%) nên kéo điểm xuống: <b>dạy sai thì AI học sai</b>.`);
+  if (!tips.length) tips.push("✨ Lựa chọn rất chuẩn: học tiếp từ AI có sẵn, có nhân bản ảnh, đủ số vòng.");
   $("#tr-result").innerHTML = `<div class="result">
-    <div class="res-top"><div class="res-g">${grade[0]}</div><div><div class="res-n">${pct}%</div><div class="muted">mAP50 · ${grade[1]}</div></div>
-    <div class="res-s"><b>${Math.round(ms)} ms</b><span class="muted small">/ảnh trên máy này</span></div></div>
+    <div class="res-top"><div class="res-g">${grade[0]}</div><div><div class="res-n">${pct}%</div><div class="muted">điểm của AI · ${grade[1]}</div></div></div>
     <div class="ap">${sim.perClass.map(({ c, ap }) => `<div class="bar"><span class="bl">${c.emoji} ${c.vi}</span><span class="bt"><i style="width:${ap * 100}%;background:${c.color}"></i></span><span class="bv">${Math.round(ap * 100)}%</span></div>`).join("")}</div>
     <div class="tips">${tips.map((t) => `<p>${t}</p>`).join("")}</div>
-    ${SHOW_SIM_NOTE ? `<div class="muted small">ⓘ Đây là mô phỏng. Huấn luyện thật cần GPU nhiều giờ. Bước sau dùng YOLO11n đã được huấn luyện sẵn.</div>` : ""}
+    ${SHOW_SIM_NOTE ? `<div class="muted small">ⓘ Đây là mô phỏng. Huấn luyện thật mất nhiều giờ trên máy tính mạnh. Bước sau dùng AI đã được huấn luyện sẵn.</div>` : ""}
   </div>`;
   renderHist();
   if (pct >= 60) { sfx.win(); confetti({ count: 120 }); } else sfx.fail();
-  if (S.runs.length === 1) toast("💡", "Thử thách", "Đổi 1 cài đặt rồi huấn luyện lại để so sánh!");
-  ctx.complete(S.runs.length >= 2 ? "Bạn đã so sánh các cấu hình. Đi tiếp để dùng AI thật!" : "Huấn luyện xong! Có thể thử cấu hình khác hoặc đi tiếp.");
+  if (S.runs.length === 1) toast("💡", "Thử thách", "Đổi 1 lựa chọn rồi huấn luyện lại để so sánh!");
+  ctx.complete(S.runs.length >= 2 ? "Bạn đã so sánh các lựa chọn. Đi tiếp để dùng AI thật!" : "Huấn luyện xong! Có thể thử lựa chọn khác hoặc đi tiếp.");
 }
 
 function renderHist() {
   if (S.runs.length < 1) return;
   $("#tr-hist").hidden = false;
   const best = S.best;
-  $("#tr-table").innerHTML = `<tr><th>#</th><th>Mô hình</th><th>Khởi đầu</th><th>Vòng</th><th>Tăng cường</th><th>mAP50</th><th>Tốc độ</th></tr>` +
-    S.runs.map((r) => `<tr class="${r === best ? "best" : ""}"><td>${r.n}${r === best ? " 👑" : ""}</td><td>${MODELS[r.model].vi}</td><td>${INITS[r.init].vi}</td><td>${r.ep}</td><td>${r.aug ? "✔" : "✖"}</td><td><b>${Math.round(r.map * 100)}%</b></td><td>${Math.round(r.ms)} ms</td></tr>`).join("");
+  $("#tr-table").innerHTML = `<tr><th>Lần</th><th>AI bắt đầu</th><th>Số vòng học</th><th>Nhân bản ảnh</th><th>Điểm của AI</th></tr>` +
+    S.runs.map((r) => `<tr class="${r === best ? "best" : ""}"><td>${r.n}${r === best ? " 👑" : ""}</td><td>${INITS[r.init].vi}</td><td>${r.ep}</td><td>${r.aug ? "Bật" : "Tắt"}</td><td><b>${Math.round(r.map * 100)}%</b></td></tr>`).join("");
 }
 
 export default {
   id: "train", icon: "🧠", title: "Huấn luyện",
   blurb: "Xem AI học qua từng vòng",
-  hint: "Chọn cài đặt rồi bấm ▶ Huấn luyện. Thử nhiều cấu hình để so sánh!",
-  guide: { title: "Bước 4: Huấn luyện mô hình", text: "Mỗi <b>vòng (epoch)</b>, AI xem hết ảnh luyện tập, đoán khung, so với đáp án rồi <b>tự chỉnh</b> để bớt sai. Chọn cài đặt, bấm <b>▶ Huấn luyện</b>, rồi thử đổi một cài đặt (ví dụ <b>Từ con số 0</b> hoặc <b>Tắt tăng cường</b>) xem chuyện gì xảy ra!" },
+  hint: "Bấm ▶ Huấn luyện. Sau đó thử đổi một lựa chọn để so sánh!",
+  guide: { title: "Bước 4: Cho AI học (huấn luyện)", text: "Mỗi <b>vòng học</b>, AI xem hết ảnh, đoán, so với đáp án rồi <b>tự sửa</b> để bớt sai. Cứ bấm <b>▶ Huấn luyện</b> trước. Sau đó thử đổi một lựa chọn (ví dụ <b>Từ con số 0</b>) rồi huấn luyện lại xem chuyện gì xảy ra!" },
   enter(c) {
     ctx = c;
     if (!inited) {

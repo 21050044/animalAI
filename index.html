@@ -31,13 +31,13 @@
         <div class="intro-emojis">🐶🐱🐦🐮🐘🦓</div>
         <h1>Chế tạo AI <span class="hl">nhìn thấy động vật</span></h1>
         <p class="lead">Khu bảo tồn cần một camera tự động <b>tìm và đếm thú</b>. Bạn là kỹ sư AI được giao nhiệm vụ.
-          Bạn sẽ đi đúng các bước mà kỹ sư thật làm để tạo ra mô hình <b>YOLO</b>, loại AI chạy trong xe tự lái và camera an ninh.</p>
+          Bạn sẽ đi đúng các bước mà kỹ sư thật làm để tạo ra <b>YOLO</b>, loại AI nhìn hình đang chạy trong xe tự lái và camera an ninh.</p>
         <div class="intro-steps" id="intro-steps"></div>
         <div class="intro-form">
           <input id="intro-name" maxlength="30" placeholder="Tên của bạn (để in lên chứng nhận)">
           <button class="btn primary big" id="intro-go">Bắt đầu nhiệm vụ →</button>
         </div>
-        <div class="muted small" id="intro-load">Đang tải mô hình AI…</div>
+        <div class="muted small" id="intro-load">Đang tải AI…</div>
       </div>
     </div>
   </section>
@@ -48,7 +48,7 @@
       <div class="label-stage">
         <div class="label-count" id="lb-left"></div>
         <div class="card-stack" id="lb-stack"></div>
-        <div class="label-hint muted">Kéo ảnh vào đúng nhóm, hoặc bấm vào nhóm.</div>
+        <div class="label-hint muted">Bấm vào nhóm đúng, hoặc kéo ảnh vào nhóm.</div>
         <div class="buckets" id="lb-buckets"></div>
       </div>
       <aside class="side">
@@ -74,11 +74,10 @@
         <div class="box-result" id="bx-result"></div>
       </div>
       <aside class="side">
-        <h3>🎯 Khung của bạn trông thế nào với AI</h3>
-        <div class="yolo-line" id="bx-yolo"><span class="muted">Vẽ một khung để xem…</span></div>
+        <h3>🎯 Khung được chấm thế nào?</h3>
         <div class="iou-explain">
           <div class="iou-fig"><div class="iou-a"></div><div class="iou-b"></div></div>
-          <div><b>IoU</b> (độ trùng khớp) = phần chồng nhau ÷ phần gộp lại. Trùng hoàn toàn = 100%.</div>
+          <div>Khung của bạn được so với <b>khung đáp án</b>. Hai khung chồng lên nhau càng nhiều thì <b>độ khớp</b> càng cao. Trùng hoàn toàn là 100%.</div>
         </div>
         <div class="thumbs" id="bx-thumbs"></div>
         <div class="concept" id="bx-concept" hidden></div>
@@ -90,27 +89,19 @@
   <section class="screen" id="s-prep" hidden>
     <div class="prep-grid">
       <div class="panel">
-        <h3>① Chia dữ liệu: ôn tập hay đi thi?</h3>
-        <p class="muted small">AI <b>học</b> trên phần Huấn luyện và được <b>chấm điểm</b> trên phần Kiểm tra, gồm những ảnh nó chưa từng thấy.</p>
+        <h3>① Chia ảnh: phần để học, phần để kiểm tra</h3>
+        <p class="muted small">Giống như ôn tập và đi thi: AI <b>học</b> trên một phần ảnh, rồi được <b>chấm điểm</b> trên phần còn lại, là những ảnh nó chưa từng thấy.</p>
         <div class="split-tiles" id="pp-tiles"></div>
         <input type="range" id="pp-split" min="50" max="95" step="5" value="80">
-        <div class="split-legend"><span class="tr">■ Huấn luyện <b id="pp-tr"></b></span><span class="va">■ Kiểm tra <b id="pp-va"></b></span></div>
+        <div class="split-legend"><span class="tr">■ Để học <b id="pp-tr"></b></span><span class="va">■ Để kiểm tra <b id="pp-va"></b></span></div>
         <div class="warn" id="pp-warn"></div>
       </div>
       <div class="panel">
-        <h3>② Chuẩn hoá: mọi ảnh về cùng một khuôn 640×640</h3>
-        <div class="lb-demo">
-          <div><canvas id="pp-orig"></canvas><div class="cap" id="pp-orig-cap"></div></div>
-          <div class="arrow">→</div>
-          <div><canvas id="pp-lb"></canvas><div class="cap">640×640, thêm viền xám, không méo hình</div></div>
-        </div>
-        <div class="pix" id="pp-pix"></div>
-      </div>
-      <div class="panel wide">
-        <h3>③ Tăng cường dữ liệu: 1 ảnh biến thành nhiều ảnh</h3>
+        <h3>② Nhân bản ảnh: 1 ảnh biến thành nhiều ảnh</h3>
+        <p class="muted small">Ít ảnh quá thì AI học không giỏi. Mẹo: lật, đổi màu, phóng to, ghép ảnh để có thêm ảnh mới mà không cần chụp thêm.</p>
         <div class="aug-toggles" id="pp-augs"></div>
         <div class="aug-grid" id="pp-grid"></div>
-        <div class="aug-foot"><button class="btn" id="pp-reroll">🎲 Tạo mẫu khác</button><div class="big-num"><span id="pp-total">0</span><span></span></div></div>
+        <div class="aug-foot"><button class="btn" id="pp-reroll">🎲 Xem ảnh khác</button><div class="big-num"><span id="pp-total">0</span><span></span></div></div>
       </div>
     </div>
   </section>
@@ -118,22 +109,20 @@
   <!-- 4. Huấn luyện -->
   <section class="screen" id="s-train" hidden>
     <div class="train-top">
-      <div class="opt-group"><label>Kích cỡ mô hình</label><div class="seg" id="tr-model"></div></div>
-      <div class="opt-group"><label>Khởi đầu</label><div class="seg" id="tr-init"></div></div>
-      <div class="opt-group"><label>Số vòng học (epoch)</label><div class="seg" id="tr-ep"></div></div>
-      <div class="opt-group"><label>Tăng cường</label><div class="seg" id="tr-aug"></div></div>
+      <div class="opt-group"><label>AI bắt đầu từ đâu?</label><div class="seg" id="tr-init"></div></div>
+      <div class="opt-group"><label>Số vòng học</label><div class="seg" id="tr-ep"></div></div>
+      <div class="opt-group"><label>Nhân bản ảnh</label><div class="seg" id="tr-aug"></div></div>
       <button class="btn primary big" id="tr-go">▶ Huấn luyện</button>
     </div>
     <div class="train-grid">
       <div class="panel">
-        <h3>Bên trong mô hình YOLO <span class="muted small" id="tr-epoch"></span></h3>
+        <h3>AI học như thế nào? <span class="muted small" id="tr-epoch"></span></h3>
         <div class="net" id="tr-net"></div>
-        <div class="console" id="tr-log"></div>
       </div>
       <div class="panel">
-        <h3>Sai số (loss): càng thấp càng giỏi</h3>
+        <h3>Mức sai: càng thấp càng tốt</h3>
         <canvas id="tr-loss" height="170"></canvas>
-        <h3>Điểm chính xác (mAP50): càng cao càng giỏi</h3>
+        <h3>Điểm của AI: càng cao càng tốt</h3>
         <canvas id="tr-map" height="150"></canvas>
       </div>
       <div class="panel">
@@ -169,10 +158,10 @@
       <aside class="side">
         <h3>🔎 AI tìm thấy</h3>
         <div class="counts" id="dt-counts"><span class="muted">Chưa có ảnh</span></div>
-        <div class="pipeline" id="dt-pipe"></div>
         <h3>⚙ Tuỳ chỉnh</h3>
-        <label class="small">Ngưỡng tin cậy: <b id="dt-conf-v"></b></label>
+        <label class="small">AI phải chắc chắn ít nhất: <b id="dt-conf-v"></b></label>
         <input type="range" id="dt-conf" min="5" max="95" value="35">
+        <div class="muted small">Bật hoặc tắt loài muốn tìm:</div>
         <div class="chips" id="dt-chips"></div>
         <h3>🏅 Thử thách</h3>
         <ul class="missions" id="dt-missions"></ul>

@@ -127,18 +127,18 @@ function finish() {
   sfx.win(); confetti({ count: 100 });
   const st = S.labelStats, n = st.total - st.trash;
   const c = $("#lb-concept"); c.hidden = false;
-  c.innerHTML = `<b>💡 Bạn vừa làm "người gắn nhãn dữ liệu"</b>
+  c.innerHTML = `<b>💡 Bạn vừa làm việc của "người gắn nhãn"</b>
     <p>Bạn đã gắn ${n} nhãn, loại ${st.trash} ảnh rác, đúng ngay lần đầu ${Math.round((st.first / st.total) * 100)}%.</p>
-    <p>AI <b>không tự biết</b> con chó là gì. Nó cần con người chỉ cho bằng <b>nhãn</b>. Bộ dữ liệu COCO mà YOLO học có <b>hơn 200.000 ảnh</b> do hàng nghìn người gắn nhãn. Nhãn sai thì AI học sai.</p>`;
-  $("#lb-stack").innerHTML = `<div class="stack-done">✅ Gắn nhãn xong!<br><span class="muted">Nhưng YOLO còn cần biết con vật nằm <b>ở đâu</b> trong ảnh…</span></div>`;
+    <p>AI <b>không tự biết</b> con chó là gì. Con người phải chỉ cho nó bằng <b>nhãn</b> (tên gắn vào từng ảnh). AI thật học từ <b>hơn 200.000 ảnh</b> do hàng nghìn người gắn nhãn. Nhãn sai thì AI học sai.</p>`;
+  $("#lb-stack").innerHTML = `<div class="stack-done">✅ Gắn nhãn xong!<br><span class="muted">Nhưng AI còn cần biết con vật nằm <b>ở đâu</b> trong ảnh…</span></div>`;
   ctx.complete("Gắn nhãn xong! Tiếp theo: vẽ khung cho con vật.");
 }
 
 export default {
   id: "label", icon: "🏷️", title: "Gắn nhãn",
   blurb: "Dạy AI biết con nào là con nào",
-  hint: "Kéo ảnh vào đúng nhóm. Cẩn thận ảnh 'bẫy'!",
-  guide: { title: "Bước 1: Gắn nhãn dữ liệu", text: "AI học từ ví dụ. Hãy <b>kéo từng ảnh vào đúng nhóm</b> con vật. Có vài ảnh <b>bẫy</b> không phải con vật thật, hãy kéo chúng vào <b>🗑️ Loại bỏ</b>." },
+  hint: "Bấm vào nhóm đúng với con vật trong ảnh. Cẩn thận ảnh 'bẫy'!",
+  guide: { title: "Bước 1: Gắn nhãn cho ảnh", text: "AI học từ ví dụ. Hãy <b>bấm vào đúng nhóm</b> của con vật trong ảnh (hoặc kéo ảnh vào nhóm). Có vài ảnh <b>bẫy</b> không phải con vật thật, hãy kéo chúng vào <b>🗑️ Loại bỏ</b>." },
   enter(c) {
     ctx = c;
     if (started && !queue.length) return; // đã xong — giữ nguyên

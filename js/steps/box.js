@@ -5,10 +5,11 @@ import { iou } from "../yolo.js";
 import { sfx, confetti } from "../fx.js";
 
 let list = [], idx = 0, cur = null, checked = false, tries = 0, ctx, finished = false;
+const DRAW_COUNT = 3; // số ảnh học sinh tự vẽ khung, phần còn lại máy làm
 const img = () => $("#bx-img"), cv = () => $("#bx-cv");
 
 function pickList() {
-  list = classes().map((c) => S.pool.find((it) => it.cls === c.key && (S.labelSet || []).includes(it.file)) || S.pool.find((it) => it.cls === c.key)).filter(Boolean);
+  list = classes().map((c) => S.pool.find((it) => it.cls === c.key && (S.labelSet || []).includes(it.file)) || S.pool.find((it) => it.cls === c.key)).filter(Boolean).slice(0, DRAW_COUNT);
 }
 
 function draw() {
@@ -36,18 +37,6 @@ function draw() {
     g.fillStyle = c2.color; g.fillRect(cur.x * W - 1.5, ty, tw, 22);
     g.fillStyle = "#0b1220"; g.fillText(tag, cur.x * W + 4, ty + 16);
   }
-  renderYolo();
-}
-
-function renderYolo() {
-  const it = list[idx], el = $("#bx-yolo");
-  if (!cur) { el.innerHTML = `<span class="muted">Kéo chuột trên ảnh để vẽ một khung bao trọn con vật…</span>`; return; }
-  const c = byKey(it.cls);
-  const v = [c.id, cur.x + cur.w / 2, cur.y + cur.h / 2, cur.w, cur.h].map((n, i) => (i ? n.toFixed(3) : n));
-  el.innerHTML = `<div class="muted small">AI không nhìn thấy "khung", nó chỉ đọc <b>5 con số</b> trong file nhãn:</div>
-    <div class="yl"><span class="y0" title="mã lớp">${v[0]}</span> <span class="y1" title="tâm X">${v[1]}</span> <span class="y2" title="tâm Y">${v[2]}</span> <span class="y3" title="rộng">${v[3]}</span> <span class="y4" title="cao">${v[4]}</span></div>
-    <div class="yk"><span class="y0">mã lớp (${c.vi})</span><span class="y1">tâm ngang</span><span class="y2">tâm dọc</span><span class="y3">rộng</span><span class="y4">cao</span></div>
-    <div class="muted small">Số được chia theo kích thước ảnh (0 → 1) nên ảnh to hay nhỏ đều dùng được.</div>`;
 }
 
 function enableDraw() {
@@ -70,7 +59,7 @@ function enableDraw() {
 function show() {
   const it = list[idx], c = byKey(it.cls);
   cur = null; checked = false; tries = 0;
-  $("#bx-title").innerHTML = `Vẽ khung quanh <b style="color:${c.color}">${c.emoji} ${c.vi}</b>`;
+  $("#bx-title").innerHTML = `Vẽ khung quanh <b class="tagc" style="--c:${c.color}">${c.emoji} ${c.vi}</b>`;
   $("#bx-prog").textContent = `Ảnh ${idx + 1}/${list.length}`;
   $("#bx-result").innerHTML = "";
   $("#bx-check").disabled = true; $("#bx-check").hidden = false; $("#bx-next").hidden = true;
@@ -96,10 +85,10 @@ function check() {
   checked = true; tries++; draw();
   const pct = Math.round(v * 100);
   const pass = v >= 0.5 || tries >= 3;
-  const msg = v >= 0.85 ? "Xuất sắc! Chuẩn như kỹ sư gán nhãn chuyên nghiệp." : v >= 0.7 ? "Tốt lắm! Khung khá sát." :
+  const msg = v >= 0.85 ? "Xuất sắc! Khung rất sát con vật." : v >= 0.7 ? "Tốt lắm! Khung khá sát." :
     v >= 0.5 ? "Tạm ổn, nhưng khung còn lệch. Nhớ ôm sát từ tai đến chân, đuôi." :
     "Khung lệch nhiều quá: AI sẽ học sai vị trí con vật. Thử lại nhé!";
-  $("#bx-result").innerHTML = `<div class="iou-big ${v >= 0.5 ? "ok" : "bad"}"><b>IoU ${pct}%</b> ${stars(v)}</div><div>${msg}</div>`;
+  $("#bx-result").innerHTML = `<div class="iou-big ${v >= 0.5 ? "ok" : "bad"}"><b>Khớp ${pct}%</b> ${stars(v)}</div><div>${msg}</div>`;
   if (v >= 0.5) sfx.correct(); else sfx.fail();
   if (pass) {
     const prev = S.myBoxes[it.file]?.iou || 0;
@@ -118,7 +107,7 @@ async function autoAnnotate() {
   const rest = S.pool.filter((it) => !list.includes(it));
   const wrap = $("#bx-wrap");
   wrap.classList.add("auto");
-  wrap.innerHTML = `<div class="auto-head">🤖 Còn <b>${rest.length}</b> ảnh nữa. Vẽ tay hết thì lâu lắm! Kỹ sư thật dùng <b>công cụ gán nhãn tự động</b>, rồi người kiểm tra lại.</div><div class="auto-grid" id="bx-auto"></div>`;
+  wrap.innerHTML = `<div class="auto-head">🤖 Còn <b>${rest.length}</b> ảnh nữa. Vẽ tay hết thì lâu lắm! Kỹ sư thật để <b>máy vẽ khung tự động</b>, rồi người kiểm tra lại.</div><div class="auto-grid" id="bx-auto"></div>`;
   const grid = $("#bx-auto");
   for (const it of rest) {
     const c = byKey(it.cls);
@@ -131,17 +120,17 @@ async function autoAnnotate() {
   const ious = Object.values(S.myBoxes).map((b) => b.iou);
   const avg = Math.round((ious.reduce((a, b) => a + b, 0) / ious.length) * 100);
   const cc = $("#bx-concept"); cc.hidden = false;
-  cc.innerHTML = `<b>💡 Gắn nhãn cho YOLO = tên + vị trí</b><p>Khung của bạn trùng trung bình <b>${avg}%</b> với đáp án. Mỗi ảnh huấn luyện có một file .txt chứa 5 con số cho mỗi con vật.</p><p>Bộ dữ liệu bây giờ: <b>${S.pool.length} ảnh</b> đã có nhãn và khung.</p>`;
+  cc.innerHTML = `<b>💡 AI cần biết cả tên lẫn vị trí</b><p>Khung của bạn khớp trung bình <b>${avg}%</b> với đáp án. Khung vẽ ẩu thì AI sẽ học sai chỗ con vật đứng.</p><p>Bây giờ bạn có <b>${S.pool.length} ảnh</b> đã đủ tên và khung.</p>`;
   $("#bx-result").innerHTML = ""; $("#bx-check").hidden = true; $("#bx-next").hidden = true; $("#bx-clear").hidden = true;
-  $("#bx-title").textContent = "Dữ liệu đã đủ nhãn + khung ✅"; $("#bx-prog").textContent = "";
-  ctx.complete("Tuyệt! Tiếp theo: chuẩn bị dữ liệu cho AI học.");
+  $("#bx-title").textContent = "Mọi ảnh đã có tên và khung ✅"; $("#bx-prog").textContent = "";
+  ctx.complete("Tuyệt! Tiếp theo: chuẩn bị ảnh cho AI học.");
 }
 
 export default {
   id: "box", icon: "🔲", title: "Vẽ khung",
   blurb: "Chỉ cho AI con vật nằm ở đâu",
   hint: "Kéo chuột trên ảnh để vẽ khung ôm sát con vật.",
-  guide: { title: "Bước 2: Vẽ khung bao (bounding box)", text: "YOLO không chỉ nói <b>“có con chó”</b> mà còn chỉ ra <b>con chó ở đâu</b>. Hãy <b>kéo chuột vẽ khung ôm sát</b> con vật. Khung càng sát thì điểm IoU càng cao." },
+  guide: { title: "Bước 2: Vẽ khung quanh con vật", text: "AI không chỉ nói <b>“có con chó”</b> mà còn chỉ ra <b>con chó ở đâu</b>. Hãy <b>kéo chuột vẽ khung ôm sát</b> con vật trong 3 ảnh. Khung càng sát thì độ khớp càng cao." },
   enter(c) {
     ctx = c;
     if (finished) return;

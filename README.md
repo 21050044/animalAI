@@ -1,6 +1,6 @@
 # 🐾 Xưởng AI Động Vật
 
-Bài trải nghiệm khoảng 20–25 phút cho học sinh. Mỗi học sinh tự đi hết quy trình làm ra một mô hình **YOLO** nhận diện động vật. Không cần camera, không cần Internet, mỗi máy chạy riêng.
+Bài trải nghiệm khoảng 20 phút cho học sinh lớp 12. Mỗi học sinh tự đi hết quy trình làm ra một mô hình **YOLO** nhận diện động vật. Không cần camera, không cần Internet, mỗi máy chạy riêng.
 
 ## Chạy
 
@@ -17,16 +17,17 @@ Bài trải nghiệm khoảng 20–25 phút cho học sinh. Mỗi học sinh t�
 | Bước | Thời gian | Học sinh làm gì | Thật hay mô phỏng |
 |---|---|---|---|
 | 🏷️ Gắn nhãn | ~4' | Kéo từng ảnh vào nhóm con vật. Có ảnh "bẫy" (gấu bông, tượng, vạch kẻ đường…) phải kéo vào 🗑️ | Thật (ảnh thật, có chấm đúng/sai) |
-| 🔲 Vẽ khung | ~5' | Vẽ khung bao con vật, được chấm **IoU** và thấy 5 con số nhãn YOLO. Sau đó "trợ lý" tự gán khung cho phần ảnh còn lại | Thật (đáp án lấy từ YOLO11m) |
-| 🧪 Chuẩn bị dữ liệu | ~3' | Kéo thanh chia train/val, xem letterbox 640×640, bật/tắt tăng cường (lật, màu, phóng, mosaic) | Thật (tăng cường được vẽ trực tiếp, khung biến đổi theo) |
-| 🧠 Huấn luyện | ~5' | Chọn cỡ mô hình, transfer learning hay học từ 0, số epoch, tăng cường. Xem luồng chạy, loss, mAP, ảnh kiểm tra tốt dần lên. So sánh các lần chạy | **Mô phỏng.** Kết quả thay đổi theo lựa chọn và chất lượng nhãn của học sinh |
-| 🎯 Nhận diện | ~6' | Kéo thả, chọn file hoặc **Ctrl+V** ảnh/video tìm trên mạng. Chỉnh ngưỡng, bật/tắt lớp, làm 6 thử thách | **Thật**: YOLO11n chạy trong trình duyệt (onnxruntime-web) |
+| 🔲 Vẽ khung | ~3' | Vẽ khung bao con vật trên 3 ảnh, được chấm **độ khớp** với khung đáp án (IoU). Sau đó máy tự vẽ khung cho phần ảnh còn lại | Thật (đáp án lấy từ YOLO) |
+| 🧪 Chuẩn bị ảnh | ~2' | Kéo thanh chia ảnh để học / để kiểm tra, bật/tắt các kiểu nhân bản ảnh (lật, màu, phóng, ghép 4) | Thật (ảnh nhân bản được vẽ trực tiếp, khung biến đổi theo) |
+| 🧠 Huấn luyện | ~5' | Chọn học tiếp từ AI có sẵn hay học từ 0, số vòng học, bật/tắt nhân bản ảnh. Xem mức sai, điểm, ảnh kiểm tra tốt dần lên. So sánh các lần chạy | **Mô phỏng.** Kết quả thay đổi theo lựa chọn và chất lượng nhãn của học sinh |
+| 🎯 Nhận diện | ~6' | Bấm ảnh mẫu, kéo thả, chọn file hoặc **Ctrl+V** ảnh/video tìm trên mạng. Chỉnh mức chắc chắn, bật/tắt loài, làm 4 thử thách | **Thật**: YOLO11n chạy trong trình duyệt (onnxruntime-web) |
+
+Giao diện cố ý tránh thuật ngữ tiếng Anh. Thầy cô có thể nhắc thêm khi giảng: độ khớp = IoU, mức sai = loss, điểm của AI = mAP50, vòng học = epoch, nhân bản ảnh = data augmentation, học tiếp từ AI có sẵn = transfer learning, học vẹt = overfitting.
 
 Bài học về huấn luyện được cài sẵn trong mô phỏng:
-- **Học từ con số 0** thì điểm rất thấp. Đây là lý do cần transfer learning.
-- **Tắt tăng cường và để nhiều epoch** thì đường loss kiểm tra đi lên lại, tức là mô hình học vẹt.
-- **10 epoch** thì mô hình học chưa đủ.
-- **Medium** chính xác hơn nhưng chậm hơn.
+- **Học từ con số 0** thì điểm rất thấp. Đây là lý do cần học tiếp từ AI có sẵn.
+- **Tắt nhân bản ảnh và để nhiều vòng học** thì đường mức sai trên ảnh kiểm tra đi lên lại, tức là AI học vẹt.
+- **10 vòng học** thì AI học chưa đủ.
 - Nhãn và khung học sinh làm càng ẩu thì điểm càng thấp.
 
 ## Tuỳ chỉnh (`js/config.js`)

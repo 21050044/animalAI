@@ -5,11 +5,11 @@ export const ALL_CLASSES = {
   cat:      { id: 15, vi: "Mèo",          emoji: "🐱", color: "#f472b6" },
   dog:      { id: 16, vi: "Chó",          emoji: "🐶", color: "#fbbf24" },
   horse:    { id: 17, vi: "Ngựa",         emoji: "🐴", color: "#a78bfa" },
-  sheep:    { id: 18, vi: "Cừu",          emoji: "🐑", color: "#e2e8f0" },
+  sheep:    { id: 18, vi: "Cừu",          emoji: "🐑", color: "#2dd4bf" },
   cow:      { id: 19, vi: "Bò",           emoji: "🐮", color: "#fb923c" },
   elephant: { id: 20, vi: "Voi",          emoji: "🐘", color: "#94a3b8" },
   bear:     { id: 21, vi: "Gấu",          emoji: "🐻", color: "#b45309" },
-  zebra:    { id: 22, vi: "Ngựa vằn",     emoji: "🦓", color: "#f8fafc" },
+  zebra:    { id: 22, vi: "Ngựa vằn",     emoji: "🦓", color: "#84cc16" },
   giraffe:  { id: 23, vi: "Hươu cao cổ",  emoji: "🦒", color: "#facc15" },
 };
 

@@ -1,7 +1,6 @@
-// Bước 3 — Chuẩn bị dữ liệu: chia train/val, letterbox 640, tăng cường (giống YOLO thật).
+// Bước 3 — Chuẩn bị ảnh: chia phần học / phần kiểm tra, rồi nhân bản ảnh (lật, đổi màu, phóng, ghép 4).
 import { S, $, h, imgUrl, loadImg, shuffle, rng } from "../state.js";
 import { byKey } from "../config.js";
-import { letterbox } from "../yolo.js";
 import { sfx } from "../fx.js";
 
 let ctx, imgs = new Map(), order = [], seed = 7, inited = false;
@@ -9,8 +8,8 @@ let ctx, imgs = new Map(), order = [], seed = 7, inited = false;
 const AUGS = [
   { k: "flip", icon: "↔️", vi: "Lật ngang", why: "Chó quay trái hay phải vẫn là chó" },
   { k: "hsv", icon: "🎨", vi: "Đổi màu / độ sáng", why: "Ảnh chụp lúc trời tối hay nắng gắt" },
-  { k: "scale", icon: "🔍", vi: "Phóng to / dịch", why: "Con vật ở xa, ở gần, ở góc ảnh" },
-  { k: "mosaic", icon: "🧩", vi: "Ghép 4 ảnh (mosaic)", why: "Tuyệt chiêu riêng của YOLO: nhiều con, nhiều cảnh trong 1 ảnh" },
+  { k: "scale", icon: "🔍", vi: "Phóng to / thu nhỏ", why: "Con vật ở xa, ở gần, ở góc ảnh" },
+  { k: "mosaic", icon: "🧩", vi: "Ghép 4 ảnh", why: "Nhiều con, nhiều cảnh trong 1 ảnh" },
 ];
 
 async function preload() {
@@ -30,34 +29,14 @@ function renderSplit() {
   $("#pp-va").textContent = `${100 - p}% · ${n - ntr} ảnh`;
   const w = $("#pp-warn");
   w.textContent = p >= 95 ? "⚠ Quá ít ảnh kiểm tra: điểm số sẽ không đáng tin (giống đề thi chỉ có 1 câu)."
-    : p <= 60 ? "⚠ Quá ít ảnh để học: AI sẽ học không kỹ." : "👍 Tỉ lệ hợp lý. Kỹ sư thường dùng 80/20.";
+    : p <= 60 ? "⚠ Quá ít ảnh để học: AI sẽ học không kỹ." : "👍 Tỉ lệ hợp lý. Kỹ sư thường chia 80% để học, 20% để kiểm tra.";
   w.className = "warn " + (p >= 95 || p <= 60 ? "bad" : "ok");
   S.trainFiles = order.slice(0, ntr).map((x) => x.file);
   S.valFiles = order.slice(ntr).map((x) => x.file);
   renderTotal();
 }
 
-// ---------- ② letterbox ----------
-function renderLetterbox() {
-  const it = S.pool.find((x) => { const im = imgs.get(x.file); return im && im.naturalWidth / im.naturalHeight > 1.25; }) || S.pool[0];
-  const im = imgs.get(it.file);
-  const o = $("#pp-orig"), D = 190;
-  const k = Math.min(D / im.naturalWidth, D / im.naturalHeight);
-  o.width = Math.round(im.naturalWidth * k); o.height = Math.round(im.naturalHeight * k);
-  o.getContext("2d").drawImage(im, 0, 0, o.width, o.height);
-  $("#pp-orig-cap").textContent = `Ảnh gốc ${im.naturalWidth}×${im.naturalHeight}`;
-  const lb = letterbox(im);
-  const c = $("#pp-lb"); c.width = c.height = D;
-  c.getContext("2d").drawImage(lb.canvas, 0, 0, D, D);
-  // mẫu điểm ảnh → con số
-  const g = lb.canvas.getContext("2d", { willReadFrequently: true });
-  const d = g.getImageData(320, 320, 1, 1).data;
-  $("#pp-pix").innerHTML = `<div class="sw" style="background:rgb(${d[0]},${d[1]},${d[2]})"></div>
-    <div>Mỗi điểm ảnh = 3 con số màu <b>R ${d[0]}, G ${d[1]}, B ${d[2]}</b> → chia cho 255 → <b>${(d[0] / 255).toFixed(2)}, ${(d[1] / 255).toFixed(2)}, ${(d[2] / 255).toFixed(2)}</b>.
-    Một ảnh 640×640 = <b>1.228.800 con số</b> đưa vào YOLO.</div>`;
-}
-
-// ---------- ③ tăng cường ----------
+// ---------- ② nhân bản ảnh ----------
 function renderAugToggles() {
   const el = $("#pp-augs"); el.innerHTML = "";
   for (const a of AUGS) {
@@ -131,14 +110,14 @@ function renderTotal() {
   const on = Object.values(S.prep.augs).filter(Boolean).length;
   const mult = [1, 4, 12, 40, 120][on];
   $("#pp-total").textContent = (n * mult).toLocaleString("vi-VN");
-  $("#pp-total").parentElement.lastChild.textContent = on ? ` biến thể khác nhau từ ${n} ảnh gốc` : ` ảnh (không tăng cường: AI dễ học vẹt!)`;
+  $("#pp-total").parentElement.lastChild.textContent = on ? ` ảnh khác nhau tạo ra từ ${n} ảnh gốc` : ` ảnh (không nhân bản: AI dễ học vẹt!)`;
 }
 
 export default {
-  id: "prep", icon: "🧪", title: "Chuẩn bị dữ liệu",
-  blurb: "Chia đề, chuẩn hoá, nhân bản ảnh",
-  hint: "Kéo thanh chia dữ liệu, bật/tắt các kiểu tăng cường để xem thay đổi.",
-  guide: { title: "Bước 3: Chuẩn bị dữ liệu", text: "Trước khi học, dữ liệu cần được <b>chia</b> (ôn tập / đi thi), <b>chuẩn hoá</b> về cùng kích thước và <b>tăng cường</b> để AI thấy nhiều tình huống hơn. Thử <b>bật/tắt</b> từng kiểu tăng cường xem ảnh thay đổi ra sao!" },
+  id: "prep", icon: "🧪", title: "Chuẩn bị ảnh",
+  blurb: "Chia ảnh và nhân bản ảnh",
+  hint: "Thử bật/tắt các kiểu nhân bản để xem ảnh thay đổi, rồi bấm Tiếp tục.",
+  guide: { title: "Bước 3: Chuẩn bị ảnh cho AI học", text: "Trước khi học, ảnh được <b>chia</b> làm hai phần (để học và để kiểm tra) rồi <b>nhân bản</b> để AI thấy nhiều tình huống hơn. Mọi thứ đã đặt sẵn hợp lý. Thử <b>bật/tắt</b> từng kiểu nhân bản xem ảnh thay đổi ra sao!" },
   async enter(c) {
     ctx = c;
     await preload();
@@ -150,7 +129,7 @@ export default {
       window.addEventListener("resize", () => {});
     }
     $("#pp-split").value = S.prep.split;
-    renderSplit(); renderLetterbox(); renderAugToggles(); renderGrid();
-    ctx.complete("Dữ liệu đã sẵn sàng! Tiếp theo: huấn luyện mô hình.");
+    renderSplit(); renderAugToggles(); renderGrid();
+    ctx.complete("Ảnh đã sẵn sàng! Tiếp theo: cho AI học.");
   },
 };

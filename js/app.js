@@ -81,9 +81,9 @@ async function boot() {
 
   // tải sẵn mô hình YOLO ở chế độ nền để bước 5 dùng ngay
   const ld = $("#intro-load");
-  yolo.load((p) => (ld.textContent = `Đang tải mô hình AI… ${Math.round(p * 100)}%`))
-    .then(() => (ld.textContent = `✅ Mô hình AI sẵn sàng (${self.crossOriginIsolated ? "chế độ đa luồng" : "chế độ đơn luồng"})`))
-    .catch((e) => { ld.textContent = "⚠ Không tải được mô hình: " + e.message; console.error(e); });
+  yolo.load((p) => (ld.textContent = `Đang tải AI… ${Math.round(p * 100)}%`))
+    .then(() => { ld.textContent = "✅ AI đã sẵn sàng"; ld.title = self.crossOriginIsolated ? "chế độ đa luồng" : "chế độ đơn luồng"; })
+    .catch((e) => { ld.textContent = "⚠ Không tải được AI: " + e.message; console.error(e); });
 
   $("#intro-go").onclick = () => {
     initAudio(); sfx.go();
