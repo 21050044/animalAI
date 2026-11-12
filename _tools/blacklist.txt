@@ -1,0 +1,15 @@
+cat/cat_003.jpg      # mèo quá nhỏ, ông cụ chiếm ảnh
+dog/dog_003.jpg      # chó quá nhỏ
+dog/dog_013.jpg      # chó quá nhỏ, nhiều người
+dog/dog_014.jpg      # chó rừng/cáo — dễ gây tranh cãi
+horse/horse_004.jpg  # tranh kỵ binh
+horse/horse_017.jpg  # tranh vẽ
+giraffe/giraffe_014.jpg  # không rõ
+sheep/sheep_001.jpg  # trông như bò rừng
+sheep/sheep_035.jpg  # tranh khắc
+sheep/sheep_039.jpg  # tranh khắc
+sheep/sheep_002.jpg  # cừu quá nhỏ
+cow/cow_005.jpg      # trâu/bò rừng tối, nhỏ
+cow/cow_006.jpg      # trâu/bò rừng tối, nhỏ
+horse/horse_020.jpg  # cận cảnh dây cương
+dog/dog_019.jpg      # chỉ thấy chân

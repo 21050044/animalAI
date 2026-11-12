@@ -1,0 +1,13 @@
+# Đồ nghề chuẩn bị dữ liệu: chỉ giữ script, bỏ thư viện / ảnh gốc / cache (tải lại được)
+_tools/pylib/
+_tools/raw/
+_tools/package/
+_tools/npmcache/
+_tools/ulcfg/
+_tools/shots/
+_tools/*.pt
+_tools/*.tgz
+_tools/*.webm
+_tools/sheet.jpg
+__pycache__/
+*.pyc

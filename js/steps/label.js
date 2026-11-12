@@ -1,0 +1,149 @@
+// Bước 1 — Gắn nhãn: kéo từng ảnh vào đúng nhóm. Có ảnh "bẫy" phải loại bỏ.
+import { S, $, h, imgUrl, shuffle } from "../state.js";
+import { classes, byKey, LABEL_PER_CLASS, TRASH_COUNT } from "../config.js";
+import { sfx, toast, confetti } from "../fx.js";
+
+let queue = [], started = false, wrongTries = 0, ctx;
+
+const TRASH_WHY = "Đây không phải con vật thật (đồ chơi, tượng, vạch kẻ đường…). Nếu giữ lại, AI sẽ học sai!";
+
+function buildQueue() {
+  const items = [];
+  for (const c of classes()) items.push(...S.pool.filter((it) => it.cls === c.key).slice(0, LABEL_PER_CLASS));
+  const trash = shuffle(S.data.trash).slice(0, TRASH_COUNT).map((t) => ({ ...t, cls: "trash" }));
+  queue = shuffle([...items, ...trash]);
+  S.labelSet = items.map((it) => it.file);
+  S.labels = {}; S.labelStats = { first: 0, total: 0, trash: 0 };
+}
+
+function renderBuckets() {
+  const wrap = $("#lb-buckets"); wrap.innerHTML = "";
+  for (const c of classes()) {
+    wrap.append(h("button", { class: "bucket", "data-k": c.key, style: `--c:${c.color}`, onclick: () => assign(c.key) },
+      h("span", { class: "be" }, c.emoji), h("span", { class: "bn" }, c.vi), h("span", { class: "bc" }, "0")));
+  }
+  wrap.append(h("button", { class: "bucket trash", "data-k": "trash", onclick: () => assign("trash") },
+    h("span", { class: "be" }, "🗑️"), h("span", { class: "bn" }, "Loại bỏ"), h("span", { class: "bc" }, "0")));
+}
+
+function renderBars() {
+  const el = $("#lb-bars"); el.innerHTML = "";
+  for (const c of classes()) {
+    const n = Object.values(S.labels).filter((v) => v === c.key).length;
+    el.append(h("div", { class: "bar" }, h("span", { class: "bl" }, `${c.emoji} ${c.vi}`),
+      h("span", { class: "bt" }, h("i", { style: `width:${(n / LABEL_PER_CLASS) * 100}%;background:${c.color}` })),
+      h("span", { class: "bv" }, `${n}/${LABEL_PER_CLASS}`)));
+  }
+  const st = S.labelStats;
+  $("#lb-acc").textContent = st.total ? Math.round((st.first / st.total) * 100) + "%" : "–";
+  $("#lb-trash").textContent = st.trash;
+  document.querySelectorAll(".bucket").forEach((b) => {
+    const k = b.dataset.k;
+    b.querySelector(".bc").textContent = Object.values(S.labels).filter((v) => v === k).length;
+  });
+}
+
+function renderStack() {
+  const st = $("#lb-stack"); st.innerHTML = "";
+  $("#lb-left").textContent = queue.length ? `Còn ${queue.length} ảnh chưa gắn nhãn` : "";
+  queue.slice(0, 3).reverse().forEach((it, idx, arr) => {
+    const top = idx === arr.length - 1;
+    const card = h("div", { class: `pcard ${top ? "top" : ""}`, style: `--d:${arr.length - 1 - idx}` }, h("img", { src: imgUrl(it.file), draggable: "false" }));
+    if (top) { card.append(h("div", { class: "pcard-q" }, "Con gì đây? 🤔")); enableDrag(card); }
+    st.append(card);
+  });
+}
+
+function bucketAt(x, y) {
+  for (const b of document.querySelectorAll(".bucket")) {
+    const r = b.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return b;
+  }
+  return null;
+}
+
+function enableDrag(card) {
+  let sx, sy, dragging = false;
+  card.addEventListener("pointerdown", (e) => {
+    dragging = true; sx = e.clientX; sy = e.clientY; card.setPointerCapture(e.pointerId); card.classList.add("drag");
+  });
+  card.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    card.dataset.dx = dx; card.dataset.dy = dy;
+    card.style.transform = `translate(${dx}px,${dy}px) rotate(${dx / 25}deg) scale(.85)`;
+    document.querySelectorAll(".bucket").forEach((b) => b.classList.remove("hover"));
+    bucketAt(e.clientX, e.clientY)?.classList.add("hover");
+  });
+  const end = (e) => {
+    if (!dragging) return; dragging = false; card.classList.remove("drag");
+    document.querySelectorAll(".bucket").forEach((b) => b.classList.remove("hover"));
+    const b = bucketAt(e.clientX, e.clientY);
+    if (b) assign(b.dataset.k, card);
+    else card.style.transform = "";
+  };
+  card.addEventListener("pointerup", end);
+  card.addEventListener("pointercancel", end);
+}
+
+function flyTo(card, bucket) {
+  const r = card.getBoundingClientRect(), t = bucket.getBoundingClientRect();
+  const ox = +card.dataset.dx || 0, oy = +card.dataset.dy || 0;
+  const dx = t.left + t.width / 2 - (r.left + r.width / 2) + ox, dy = t.top + t.height / 2 - (r.top + r.height / 2) + oy;
+  const cur = card.style.transform || "none";
+  card.animate([{ transform: cur, opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.1)`, opacity: 0.2 }],
+    { duration: 380, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" });
+  bucket.classList.remove("bump"); void bucket.offsetWidth; bucket.classList.add("bump");
+}
+
+async function assign(key, cardEl) {
+  const it = queue[0];
+  if (!it) return;
+  const card = cardEl || $("#lb-stack .pcard.top");
+  const bucket = document.querySelector(`.bucket[data-k="${key}"]`);
+  if (key === it.cls) {
+    if (wrongTries === 0) S.labelStats.first++;
+    S.labelStats.total++; wrongTries = 0;
+    if (key === "trash") { S.labelStats.trash++; toast("🗑️", "Loại bỏ chuẩn!", TRASH_WHY, "ok"); }
+    S.labels[it.file] = key;
+    sfx.correct();
+    flyTo(card, bucket);
+    document.querySelectorAll(".bucket").forEach((b) => b.classList.remove("hint"));
+    queue.shift();
+    setTimeout(() => { renderStack(); renderBars(); if (!queue.length) finish(); }, 360);
+  } else {
+    wrongTries++;
+    sfx.fail();
+    card.style.transform = ""; card.dataset.dx = card.dataset.dy = 0;
+    card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+    const msg = it.cls === "trash" ? "Nhìn kỹ lại: đây có phải con vật THẬT không? 🤨"
+      : key === "trash" ? "Ảnh này là con vật thật, giữ lại nhé!" : "Chưa đúng, nhìn kỹ lại nào 👀";
+    ctx.status(msg);
+    if (wrongTries >= 2) document.querySelector(`.bucket[data-k="${it.cls}"]`)?.classList.add("hint");
+  }
+}
+
+function finish() {
+  sfx.win(); confetti({ count: 100 });
+  const st = S.labelStats, n = st.total - st.trash;
+  const c = $("#lb-concept"); c.hidden = false;
+  c.innerHTML = `<b>💡 Bạn vừa làm "người gắn nhãn dữ liệu"</b>
+    <p>Bạn đã gắn ${n} nhãn, loại ${st.trash} ảnh rác, đúng ngay lần đầu ${Math.round((st.first / st.total) * 100)}%.</p>
+    <p>AI <b>không tự biết</b> con chó là gì. Nó cần con người chỉ cho bằng <b>nhãn</b>. Bộ dữ liệu COCO mà YOLO học có <b>hơn 200.000 ảnh</b> do hàng nghìn người gắn nhãn. Nhãn sai thì AI học sai.</p>`;
+  $("#lb-stack").innerHTML = `<div class="stack-done">✅ Gắn nhãn xong!<br><span class="muted">Nhưng YOLO còn cần biết con vật nằm <b>ở đâu</b> trong ảnh…</span></div>`;
+  ctx.complete("Gắn nhãn xong! Tiếp theo: vẽ khung cho con vật.");
+}
+
+export default {
+  id: "label", icon: "🏷️", title: "Gắn nhãn",
+  blurb: "Dạy AI biết con nào là con nào",
+  hint: "Kéo ảnh vào đúng nhóm. Cẩn thận ảnh 'bẫy'!",
+  guide: { title: "Bước 1: Gắn nhãn dữ liệu", text: "AI học từ ví dụ. Hãy <b>kéo từng ảnh vào đúng nhóm</b> con vật. Có vài ảnh <b>bẫy</b> không phải con vật thật, hãy kéo chúng vào <b>🗑️ Loại bỏ</b>." },
+  enter(c) {
+    ctx = c;
+    if (started && !queue.length) return; // đã xong — giữ nguyên
+    started = true; wrongTries = 0;
+    buildQueue(); renderBuckets(); renderBars(); renderStack();
+    $("#lb-concept").hidden = true;
+  },
+};
