@@ -637,9 +637,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 @media (max-width: 900px) { .st-body { grid-template-columns: var(--sz) minmax(0, 1fr); } .st-rail { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; justify-content: center; } .st-step.on { transform: none; } .nn-card { --sz: min(46vw, calc(100vh - 380px)); } }
 
 /* logo trường: ảnh có nhiều nền trắng phía dưới nên cắt bớt bằng khung tỉ lệ cố định */
-.brand-top, .brand-intro, .cert-brand img { display: block; aspect-ratio: 4573 / 1600; object-fit: cover; object-position: top; border-radius: 0; }
-.brand-top { height: 40px; width: auto; flex: none; }
-.brand-intro { height: clamp(48px, 9vh, 76px); width: auto; margin: 0 auto 10px; }
+.cert-brand img { display: block; aspect-ratio: 4573 / 1600; object-fit: cover; object-position: top; border-radius: 0; }
 .cert-brand { justify-self: end; }
 .cert-brand img { height: clamp(40px, 7vh, 58px); width: auto; }
-@media (max-width: 900px) { .brand-top { display: none; } .cert-brand { grid-column: 1 / -1; justify-self: center; } }
+@media (max-width: 900px) { .cert-brand { grid-column: 1 / -1; justify-self: center; } }
