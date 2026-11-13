@@ -8,7 +8,8 @@ OUT = sys.argv[1]; PORT = sys.argv[2] if len(sys.argv) > 2 else "8100"
 B = f"http://localhost:{PORT}"
 HERE = os.path.dirname(os.path.abspath(__file__))
 DS = json.load(open(os.path.join(HERE, "..", "data", "dataset.json"), encoding="utf-8"))
-GT = {it["file"]: it["box"] for it in DS["items"]}
+GT = {it["file"]: [{"cls": it["cls"], "box": it["box"]}] for it in DS["items"]}
+GT.update({m["file"]: m["objs"] for m in DS.get("mixed", [])})
 os.makedirs(OUT, exist_ok=True)
 
 with sync_playwright() as p:
@@ -45,15 +46,22 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/a1_done.png")
     pg.click("#btn-next"); pg.wait_for_timeout(800)
 
-    # 2. vẽ khung theo đáp án (lệch nhẹ)
+    # 2. vẽ khung theo đáp án (lệch nhẹ); ảnh nhiều con: vẽ từng khung rồi kéo tên vào khung
+    def drag(a, b):
+        pg.mouse.move(*a); pg.mouse.down(); pg.mouse.move(*b, steps=6); pg.mouse.up(); pg.wait_for_timeout(150)
     for i in range(10):
         src = pg.get_attribute("#bx-img", "src")
         if not src: break
-        f = os.path.basename(src); x, y, w, h = GT[f]
+        f = os.path.basename(src)
         r = pg.locator("#bx-cv").bounding_box()
-        pg.mouse.move(r["x"] + (x + 0.02) * r["width"], r["y"] + (y + 0.01) * r["height"]); pg.mouse.down()
-        pg.mouse.move(r["x"] + (x + w - 0.01) * r["width"], r["y"] + (y + h + 0.01) * r["height"], steps=6); pg.mouse.up()
-        pg.wait_for_timeout(200)
+        P = lambda x, y: (r["x"] + x * r["width"], r["y"] + y * r["height"])
+        for o in GT[f]:
+            x, y, w, h = o["box"]; drag(P(x + 0.02, y + 0.01), P(x + w - 0.01, y + h - 0.005))
+        if len(GT[f]) > 1:
+            for o in GT[f]:
+                x, y, w, h = o["box"]; c = pg.locator(f'#bx-labels .lbl-chip[data-k="{o["cls"]}"]').bounding_box()
+                drag((c["x"] + c["width"] / 2, c["y"] + c["height"] / 2), P(x + w / 2, y + h / 2))
+            pg.screenshot(path=f"{OUT}/a2_multi.png")
         if i == 0: pg.screenshot(path=f"{OUT}/a2_draw.png")
         pg.click("#bx-check"); pg.wait_for_timeout(400)
         if i == 0: pg.screenshot(path=f"{OUT}/a2_check.png")
@@ -62,15 +70,17 @@ with sync_playwright() as p:
         last = "Xong" in nxt.inner_text()
         nxt.click(); pg.wait_for_timeout(500)
         if last: break
-    pg.wait_for_timeout(5000)
+    pg.wait_for_timeout(8000)
     pg.screenshot(path=f"{OUT}/a2_auto.png")
+    pg.click("#bx-auto .auto-cell:nth-child(1)"); pg.wait_for_timeout(600); pg.screenshot(path=f"{OUT}/a2_zoom.png"); pg.keyboard.press("Escape")
+    pg.click('#bx-tabs .tab[data-t="seg"]'); pg.wait_for_timeout(500); pg.screenshot(path=f"{OUT}/a2_seg.png")
     pg.click("#btn-next"); pg.wait_for_timeout(1500)
 
     # 3. chuẩn bị dữ liệu
     pg.screenshot(path=f"{OUT}/a3_prep.png", full_page=True)
-    pg.click(".aug:nth-child(4)"); pg.wait_for_timeout(300)
+    pg.click(".aug:nth-child(4) .sw"); pg.wait_for_timeout(300)
     pg.screenshot(path=f"{OUT}/a3_prep_nomosaic.png", full_page=True)
-    pg.click(".aug:nth-child(4)")
+    pg.click(".aug:nth-child(4) .sw")
     pg.click("#btn-next"); pg.wait_for_timeout(800)
 
     # 4. huấn luyện: lần 1 mặc định, lần 2 từ con số 0
@@ -104,7 +114,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(1500)
     pg.screenshot(path=f"{OUT}/a5_lowconf.png")
     print("missions:", pg.inner_text("#dt-missions").replace("\n", " | "))
-    pg.click("#dt-finish"); pg.wait_for_timeout(1500)
+    pg.click("#btn-next"); pg.wait_for_timeout(1500)
     pg.screenshot(path=f"{OUT}/a6_cert.png", full_page=True)
     print("errors:", errs)
     b.close()

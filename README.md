@@ -17,22 +17,23 @@ Bài trải nghiệm khoảng 20 phút cho học sinh lớp 12. Mỗi học sinh
 | Bước | Thời gian | Học sinh làm gì | Thật hay mô phỏng |
 |---|---|---|---|
 | 🏷️ Gắn nhãn | ~4' | Kéo từng ảnh vào nhóm con vật. Có ảnh "bẫy" (gấu bông, tượng, vạch kẻ đường…) phải kéo vào 🗑️ | Thật (ảnh thật, có chấm đúng/sai) |
-| 🔲 Vẽ khung | ~3' | Vẽ khung bao con vật trên 3 ảnh, được chấm **độ khớp** với khung đáp án (IoU). Sau đó máy tự vẽ khung cho phần ảnh còn lại | Thật (đáp án lấy từ YOLO) |
-| 🧪 Chuẩn bị ảnh | ~2' | Kéo thanh chia ảnh để học / để kiểm tra, bật/tắt các kiểu nhân bản ảnh (lật, màu, phóng, ghép 4) | Thật (ảnh nhân bản được vẽ trực tiếp, khung biến đổi theo) |
-| 🧠 Huấn luyện | ~5' | Chọn học tiếp từ AI có sẵn hay học từ 0, số vòng học, bật/tắt nhân bản ảnh. Xem mức sai, điểm, ảnh kiểm tra tốt dần lên. So sánh các lần chạy | **Mô phỏng.** Kết quả thay đổi theo lựa chọn và chất lượng nhãn của học sinh |
+| 🔲 Vẽ khung | ~5' | Vẽ khung bao con vật trên 4 ảnh một con, rồi 2 ảnh có 2–3 con khác loài: vẽ khung cho từng con và **kéo tên vào đúng khung**. Được chấm **độ khớp** với khung đáp án (IoU) và độ đúng của tên. Sau đó máy tự vẽ khung cho phần còn lại (bấm từng ảnh để phóng to). Tab **✂️ Bo viền** giới thiệu segmentation (bấm ảnh để so sánh khung ↔ viền), tab **✏️ Tự thử bo viền** cho học sinh tự tô viền và được chấm điểm | Thật (khung và viền đáp án lấy từ YOLO11m-seg) |
+| 🧪 Chuẩn bị ảnh | ~3' | Bộ mẫu 100 ảnh: kéo thanh chia ảnh để học / để kiểm tra. **Tăng cường dữ liệu ảnh**: bấm từng thẻ (lật, màu, phóng, ghép 4) để so sánh ảnh gốc ↔ ảnh sau biến đổi, bấm công tắc để bật/tắt, thẻ "Kết hợp" xem ảnh trộn mọi kiểu | Thật (ảnh tăng cường được vẽ trực tiếp, khung biến đổi theo) |
+| 🧠 Huấn luyện | ~5' | Chọn học tiếp từ AI có sẵn hay học từ 0, số vòng học (epoch), bật/tắt tăng cường dữ liệu. Xem loss, mAP50, ảnh kiểm tra tốt dần lên. Xem mức sai, điểm, ảnh kiểm tra tốt dần lên. So sánh các lần chạy | **Mô phỏng.** Kết quả thay đổi theo lựa chọn và chất lượng nhãn của học sinh |
 | 🎯 Nhận diện | ~6' | Bấm ảnh mẫu, kéo thả, chọn file hoặc **Ctrl+V** ảnh/video tìm trên mạng. Chỉnh mức chắc chắn, bật/tắt loài, làm 4 thử thách | **Thật**: YOLO11n chạy trong trình duyệt (onnxruntime-web) |
 
-Giao diện cố ý tránh thuật ngữ tiếng Anh. Thầy cô có thể nhắc thêm khi giảng: độ khớp = IoU, mức sai = loss, điểm của AI = mAP50, vòng học = epoch, nhân bản ảnh = data augmentation, học tiếp từ AI có sẵn = transfer learning, học vẹt = overfitting.
+Giao diện hạn chế thuật ngữ tiếng Anh; riêng biểu đồ huấn luyện giữ tên gốc (loss, mAP50, epoch) kèm giải thích tiếng Việt. Thầy cô có thể nhắc thêm khi giảng: độ khớp = IoU, mức sai = loss, điểm của AI = mAP50, vòng học = epoch, tăng cường dữ liệu ảnh = data augmentation, bo viền = segmentation, học tiếp từ AI có sẵn = transfer learning, học vẹt = overfitting.
 
 Bài học về huấn luyện được cài sẵn trong mô phỏng:
 - **Học từ con số 0** thì điểm rất thấp. Đây là lý do cần học tiếp từ AI có sẵn.
-- **Tắt nhân bản ảnh và để nhiều vòng học** thì đường mức sai trên ảnh kiểm tra đi lên lại, tức là AI học vẹt.
+- **Tắt tăng cường dữ liệu và để nhiều vòng học** thì đường mức sai trên ảnh kiểm tra đi lên lại, tức là AI học vẹt.
 - **10 vòng học** thì AI học chưa đủ.
 - Nhãn và khung học sinh làm càng ẩu thì điểm càng thấp.
 
 ## Tuỳ chỉnh (`js/config.js`)
 
 - `ACTIVE`: những lớp dùng trong buổi. Có thể chọn trong: `bird cat dog horse sheep cow elephant bear zebra giraffe`.
+- `SAMPLE_TOTAL`: tổng số ảnh mẫu (mặc định 100, chia đều cho các lớp đang dùng). Đổi `ACTIVE` thì chạy lại `_tools/build_extra.py` để mỗi lớp mới có đủ ảnh.
 - `LABEL_PER_CLASS`, `TRASH_COUNT`: số ảnh ở bước gắn nhãn.
 - `SHOW_SIM_NOTE = true`: hiện một dòng nói rõ bước huấn luyện là mô phỏng.
 - `DEFAULT_CONF`: ngưỡng tin cậy mặc định ở bước nhận diện.
@@ -45,7 +46,11 @@ Mô hình YOLO11n gốc biết 80 lớp COCO. App **chỉ đọc điểm của c
 cd _tools
 python fetch_images.py 45      # tải ảnh giấy phép mở từ Wikimedia Commons vào _tools/raw/
 python build_dataset.py 8      # YOLO11m lọc ảnh rõ ràng, ghi khung đáp án → data/
+python fetch_images.py 160 mixed   # ảnh có 2–3 con vật khác loài
+python build_extra.py          # YOLO11m-seg: thêm ảnh cho đủ 100, ảnh nhiều con, viền segmentation
 ```
+
+`build_extra.py` chỉ bổ sung, không xoá ảnh cũ. Nó cần `yolo11m-seg.pt` trong `_tools/` (tải từ trang releases của ultralytics/assets). Ảnh kiểm tra (khung + viền) được ghi ra `_tools/shots/`.
 
 - Ảnh ở `data/img/`, nhãn ở `data/dataset.json`.
 - Tác giả và giấy phép từng ảnh ở `data/credits.json` (Wikimedia Commons, CC/PD).

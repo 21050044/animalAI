@@ -13,3 +13,27 @@ cow/cow_005.jpg      # trâu/bò rừng tối, nhỏ
 cow/cow_006.jpg      # trâu/bò rừng tối, nhỏ
 horse/horse_020.jpg  # cận cảnh dây cương
 dog/dog_019.jpg      # chỉ thấy chân
+trash/trash_000.jpg  # gấu bông có con chó đồ chơi, dễ nhầm
+trash/trash_008.jpg  # mảnh gấu bông đang may, khó hiểu
+trash/trash_009.jpg  # mảnh gấu bông đang nhồi bông, khó hiểu
+trash/trash_013.jpg  # đống gấu Care Bears, rối mắt
+mixed/mixed_025.jpg  # YOLO nhầm chó thành bò
+mixed/mixed_031.jpg  # có chữ đè lên ảnh
+bird/bird_034.jpg        # chỉ thấy thân cây
+bird/bird_031.jpg        # chim quá nhỏ
+cat/cat_012.jpg          # trùng ảnh mèo khác
+cow/cow_031.jpg          # con tem
+cow/cow_074.jpg          # tranh vẽ
+zebra/zebra_000.jpg      # cận cảnh khó nhận ra
+elephant/elephant_021.jpg # ảnh tối, mờ
+elephant/elephant_023.jpg # ảnh tối, mờ
+cow/cow_077.jpg          # tranh khắc
+cow/cow_078.jpg          # tranh khắc
+elephant/elephant_032.jpg # gần trùng ảnh voi khác
+cow/cow_080.jpg          # đen trắng, biển chữ to
+elephant/elephant_033.jpg # gần trùng ảnh voi khác
+mixed/mixed_068.jpg      # ảnh đen trắng, con bên phải giống mèo nhưng YOLO gọi là chó
+mixed/mixed_033.jpg      # ảnh đen trắng, mèo quá nhỏ
+trash/trash_031.jpg      # thay theo yêu cầu (ảnh bẫy cũ trash_3.jpg)
+trash/trash_011.jpg      # thay theo yêu cầu (ảnh bẫy cũ trash_5.jpg)
+trash/trash_019.jpg      # thay theo yêu cầu (ảnh bẫy cũ trash_7.jpg)

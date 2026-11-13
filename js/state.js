@@ -1,8 +1,9 @@
 // Trạng thái dùng chung giữa các bước + tiện ích nhỏ.
-import { ACTIVE } from "./config.js";
+import { ACTIVE, SAMPLE_TOTAL } from "./config.js";
 
 export const S = {
   name: "",
+  gender: "",            // "m" | "f" | "" (chưa chọn)
   data: null,            // dataset.json
   pool: [],              // ảnh dùng trong buổi (đã lọc theo lớp ACTIVE)
   labels: {},            // file -> key lớp | "trash"
@@ -17,7 +18,12 @@ export const S = {
 export async function loadData() {
   const r = await fetch("data/dataset.json");
   S.data = await r.json();
-  S.pool = S.data.items.filter((it) => ACTIVE.includes(it.cls));
+  // lấy lần lượt từng lớp cho tới đủ SAMPLE_TOTAL ảnh để các lớp đều nhau
+  const by = ACTIVE.map((k) => S.data.items.filter((it) => it.cls === k));
+  const pick = [];
+  for (let i = 0; pick.length < SAMPLE_TOTAL && by.some((l) => l[i]); i++) for (const l of by) if (l[i] && pick.length < SAMPLE_TOTAL) pick.push(l[i]);
+  const keep = new Set(pick);
+  S.pool = S.data.items.filter((it) => keep.has(it));
   return S.data;
 }
 

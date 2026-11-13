@@ -47,6 +47,7 @@ def fit(im, maxw=640):
 for folder in sorted(os.listdir(RAW)):
     d = os.path.join(RAW, folder)
     if not os.path.isdir(d) or not os.path.exists(os.path.join(d, "credits.json")): continue
+    if folder not in COCO and folder != "trash": continue  # raw/mixed do build_extra.py xử lý
     cred =json.load(open(os.path.join(d, "credits.json"), encoding="utf-8"))
     n_single = n_multi = n_trash = 0
     for f in sorted(cred):

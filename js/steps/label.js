@@ -62,25 +62,36 @@ function bucketAt(x, y) {
   return null;
 }
 
+// Khi kéo, thẻ thu nhỏ quanh đúng điểm đang cầm (transform-origin = chỗ con trỏ) để không che các nhóm bên dưới.
+function resetCard(card) {
+  card.classList.remove("drag");
+  card.style.translate = card.style.rotate = card.style.scale = ""; card.style.transformOrigin = "";
+}
 function enableDrag(card) {
   let sx, sy, dragging = false;
   card.addEventListener("pointerdown", (e) => {
-    dragging = true; sx = e.clientX; sy = e.clientY; card.setPointerCapture(e.pointerId); card.classList.add("drag");
+    // chặn bôi đen chữ: nếu có chữ đang bôi đen, lần kéo sau trình duyệt sẽ huỷ thao tác (pointercancel)
+    e.preventDefault(); getSelection()?.removeAllRanges();
+    dragging = true; sx = e.clientX; sy = e.clientY; card.setPointerCapture(e.pointerId);
+    const r = card.getBoundingClientRect();
+    card.style.transformOrigin = `${e.clientX - r.left}px ${e.clientY - r.top}px`;
+    card.classList.add("drag");
   });
   card.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     const dx = e.clientX - sx, dy = e.clientY - sy;
-    card.dataset.dx = dx; card.dataset.dy = dy;
-    card.style.transform = `translate(${dx}px,${dy}px) rotate(${dx / 25}deg) scale(.85)`;
+    card.style.translate = `${dx}px ${dy}px`;
+    card.style.rotate = `${Math.max(-12, Math.min(12, dx / 30))}deg`;
     document.querySelectorAll(".bucket").forEach((b) => b.classList.remove("hover"));
     bucketAt(e.clientX, e.clientY)?.classList.add("hover");
   });
   const end = (e) => {
-    if (!dragging) return; dragging = false; card.classList.remove("drag");
+    if (!dragging) return; dragging = false;
     document.querySelectorAll(".bucket").forEach((b) => b.classList.remove("hover"));
     const b = bucketAt(e.clientX, e.clientY);
-    if (b) assign(b.dataset.k, card);
-    else card.style.transform = "";
+    // nhấp nhẹ (không kéo) thì thôi, thẻ trở lại như cũ
+    if (b && Math.hypot(e.clientX - sx, e.clientY - sy) > 8) assign(b.dataset.k, card);
+    else resetCard(card);
   };
   card.addEventListener("pointerup", end);
   card.addEventListener("pointercancel", end);
@@ -88,11 +99,12 @@ function enableDrag(card) {
 
 function flyTo(card, bucket) {
   const r = card.getBoundingClientRect(), t = bucket.getBoundingClientRect();
-  const ox = +card.dataset.dx || 0, oy = +card.dataset.dy || 0;
-  const dx = t.left + t.width / 2 - (r.left + r.width / 2) + ox, dy = t.top + t.height / 2 - (r.top + r.height / 2) + oy;
-  const cur = card.style.transform || "none";
-  card.animate([{ transform: cur, opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.1)`, opacity: 0.2 }],
-    { duration: 380, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" });
+  const [tx = 0, ty = 0] = (card.style.translate || "0px 0px").split(" ").map(parseFloat);
+  const dx = t.left + t.width / 2 - (r.left + r.width / 2), dy = t.top + t.height / 2 - (r.top + r.height / 2);
+  const sc = card.classList.contains("drag") ? 0.22 : 1;
+  card.style.transformOrigin = "50% 50%";
+  card.animate([{ translate: `${tx}px ${ty}px`, scale: sc, opacity: 1 }, { translate: `${tx + dx}px ${ty + dy}px`, scale: 0.06, opacity: 0.2 }],
+    { duration: 360, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" });
   bucket.classList.remove("bump"); void bucket.offsetWidth; bucket.classList.add("bump");
 }
 
@@ -114,7 +126,7 @@ async function assign(key, cardEl) {
   } else {
     wrongTries++;
     sfx.fail();
-    card.style.transform = ""; card.dataset.dx = card.dataset.dy = 0;
+    resetCard(card);
     card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
     const msg = it.cls === "trash" ? "Nhìn kỹ lại: đây có phải con vật THẬT không? 🤨"
       : key === "trash" ? "Ảnh này là con vật thật, giữ lại nhé!" : "Chưa đúng, nhìn kỹ lại nào 👀";
@@ -136,7 +148,7 @@ function finish() {
 
 export default {
   id: "label", icon: "🏷️", title: "Gắn nhãn",
-  blurb: "Dạy AI biết con nào là con nào",
+  blurb: "Giúp AI nhận biết từng loài động vật",
   hint: "Bấm vào nhóm đúng với con vật trong ảnh. Cẩn thận ảnh 'bẫy'!",
   guide: { title: "Bước 1: Gắn nhãn cho ảnh", text: "AI học từ ví dụ. Hãy <b>bấm vào đúng nhóm</b> của con vật trong ảnh (hoặc kéo ảnh vào nhóm). Có vài ảnh <b>bẫy</b> không phải con vật thật, hãy kéo chúng vào <b>🗑️ Loại bỏ</b>." },
   enter(c) {

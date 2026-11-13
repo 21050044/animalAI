@@ -1,5 +1,5 @@
 """Tải ảnh động vật (giấy phép mở) từ Wikimedia Commons vào _tools/raw/<lop>/.
-Chạy:  python fetch_images.py  [so_anh_moi_lop]
+Chạy:  python fetch_images.py  [so_anh_moi_lop] [chi_cac_lop...]
 """
 import json, os, re, sys, time, urllib.parse, urllib.request
 
@@ -20,8 +20,13 @@ QUERIES = {
     # ảnh "bẫy" cho bước làm sạch dữ liệu: không phải con vật thật
     "trash": ["teddy bear toy", "elephant statue", "zebra crossing street", "horse sculpture bronze",
               "cat food bowl", "plush toy dog"],
+    # ảnh có 2–3 con vật KHÁC LOÀI trong cùng ảnh, cho bước Vẽ khung (build_extra.py lọc lại)
+    "mixed": ["dog and cat", "cat and dog together", "cattle egret cow", "cow with egret", "zebra and elephant",
+              "elephants and zebras", "dog and cow", "cat and bird", "zebras birds", "dog herding cattle",
+              "elephant egret", "dog cat sofa"],
 }
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 45
+ONLY = set(sys.argv[2:])  # vd: python fetch_images.py 150 mixed  → chỉ tải nhóm mixed
 
 
 def get(url, tries=3):
@@ -47,6 +52,7 @@ def search(q, offset=0):
 
 
 for cls, qs in QUERIES.items():
+    if ONLY and cls not in ONLY: continue
     out = os.path.join(RAW, cls); os.makedirs(out, exist_ok=True)
     credits_path = os.path.join(out, "credits.json")
     credits = json.load(open(credits_path, encoding="utf-8")) if os.path.exists(credits_path) else {}

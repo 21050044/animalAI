@@ -6,17 +6,16 @@ import { sfx, toast, confetti } from "../fx.js";
 
 let ctx, inited = false, conf = DEFAULT_CONF, enabled = new Set(), source = null, isVideo = false, busy = false, raf = 0, lastBoxes = [], videoUrl = null;
 const MISSIONS = [
-  { k: "web", t: "Cho AI xem 1 ảnh bạn tự tìm trên mạng" },
+  { k: "web", t: "Cho AI xem 1 ảnh động vật bạn tự tìm trên mạng" },
   { k: "three", t: "Tìm ảnh có từ 3 con vật trở lên" },
   { k: "low", t: "Kéo thanh “chắc chắn” xuống dưới 15%: chuyện gì xảy ra?" },
-  { k: "fool", t: "Lừa được AI (đoán sai hoặc bỏ sót): bấm vào đây để đánh dấu", manual: true },
+  { k: "video", t: "Cho AI xem 1 video động vật trên mạng (tải về rồi kéo vào đây)" },
 ];
 
 function renderMissions() {
   const el = $("#dt-missions"); el.innerHTML = "";
   for (const m of MISSIONS) {
     const li = h("li", { class: S.missions[m.k] ? "ok" : "" }, h("span", { class: "mk" }, S.missions[m.k] ? "✅" : "⬜"), m.t);
-    if (m.manual) li.onclick = () => mission(m.k, !S.missions[m.k]);
     el.append(li);
   }
 }
@@ -38,8 +37,9 @@ function renderChips() {
 }
 
 function fitCanvas(w, hh) {
-  const cv = $("#dt-cv"), box = $("#dt-stage");
-  const maxW = box.clientWidth - 4, maxH = Math.max(300, innerHeight * 0.62);
+  // vừa khít vùng hiển thị còn trống, để không phải cuộn trang
+  const cv = $("#dt-cv"), area = $("#dt-area");
+  const maxW = Math.max(200, area.clientWidth), maxH = Math.max(160, area.clientHeight);
   const k = Math.min(maxW / w, maxH / hh, 2);
   cv.width = Math.round(w * k); cv.height = Math.round(hh * k);
   return k;
@@ -117,7 +117,7 @@ async function openSource(src, kind, fromUser) {
     await v.play().catch(() => {});
     $("#dt-play").hidden = false; $("#dt-play").textContent = "⏸";
     lastSig = ""; ctx.status("🎬 AI đang xem video: mỗi khung hình được nhận diện lại từ đầu.");
-    if (fromUser) mission("web");
+    if (fromUser) mission("video");
     videoLoop();
   } else {
     isVideo = false; $("#dt-play").hidden = true;
@@ -140,17 +140,17 @@ function renderGallery() {
   const g = $("#dt-gal"); g.innerHTML = "";
   const act = new Set(classes().map((c) => c.key));
   const on = S.data.multi.filter((x) => act.has(x.cls)), off = S.data.multi.filter((x) => !act.has(x.cls));
-  // ảnh lớp đang bật trước; sau đó 2 ảnh "bẫy" gấu bông + 2 ảnh loài chưa bật (để thảo luận: vì sao AI không thấy?)
-  const items = [...on.map((x) => [x.file, ""]), ...S.data.trash.slice(0, 2).map((x) => [x.file, "🧸 bẫy"]), ...off.slice(0, 2).map((x) => [x.file, "loài chưa học"])];
+  // ảnh lớp đang bật trước; sau đó 2 ảnh "bẫy" (tượng, gấu bông) + 2 ảnh loài chưa bật (để thảo luận: vì sao AI không thấy?)
+  const items = [...on.map((x) => [x.file, ""]), ...S.data.trash.slice(0, 2).map((x) => [x.file, "ảnh bẫy"]), ...off.slice(0, 2).map((x) => [x.file, "loài chưa học"])];
   for (const [f, tag] of items) g.append(h("button", { class: "gi", title: tag, onclick: () => openSource(imgUrl(f), "image") },
     h("img", { src: imgUrl(f), loading: "lazy" }), tag ? h("span", { class: "gt" }, tag) : null));
 }
 
 export default {
-  id: "detect", icon: "🎯", title: "Nhận diện",
-  blurb: "Dùng AI thật trên ảnh/video của bạn",
+  id: "detect", icon: "🎯", title: "Thử nghiệm",
+  blurb: "Kiểm tra AI nhận diện chính xác đến đâu",
   hint: "Bấm một ảnh mẫu bên dưới để thử ngay, hoặc đưa ảnh của bạn vào.",
-  guide: { title: "Bước 5: AI đi làm nhiệm vụ!", text: "Đây là <b>AI thật</b> chạy ngay trên máy bạn. Bấm một <b>ảnh mẫu</b> để thử ngay. Sau đó lên mạng tìm ảnh động vật, <b>sao chép ảnh</b> rồi nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> ở đây. Làm thử các <b>thử thách</b> bên phải!" },
+  guide: { title: "Bước 5: Thử nghiệm AI thật", text: "Đây là <b>AI thật</b> chạy ngay trên máy bạn. Bấm một <b>ảnh mẫu</b> để thử ngay. Sau đó lên mạng tìm ảnh động vật, <b>sao chép ảnh</b> rồi nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd> ở đây. Làm thử các <b>thử thách</b> bên phải!" },
   enter(c) {
     ctx = c;
     if (!inited) {
@@ -176,8 +176,9 @@ export default {
       const cs = $("#dt-conf"); cs.value = Math.round(conf * 100); $("#dt-conf-v").textContent = cs.value + "%";
       cs.oninput = () => { conf = cs.value / 100; $("#dt-conf-v").textContent = cs.value + "%"; };
       cs.onchange = () => runImage();
-      $("#dt-finish").onclick = () => { sfx.win(); ctx.finish(); };
       renderGallery();
+      let rt = 0; // đổi kích thước cửa sổ / bật toàn màn hình → vẽ lại cho vừa
+      window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => !$("#s-detect").hidden && runImage(), 150); });
     }
     renderChips(); renderMissions();
     ctx.complete("Thử vài ảnh rồi bấm 🎓 Nhận chứng nhận.");

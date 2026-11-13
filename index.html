@@ -27,15 +27,24 @@
   <!-- 0. Giới thiệu -->
   <section class="screen" id="s-intro">
     <div class="intro">
+      <div class="intro-bg" aria-hidden="true"><i></i><i></i><i></i><div class="floaters" id="intro-floaters"></div></div>
       <div class="intro-hero">
-        <div class="intro-emojis">🐶🐱🐦🐮🐘🦓</div>
-        <h1>Chế tạo AI <span class="hl">nhìn thấy động vật</span></h1>
-        <p class="lead">Khu bảo tồn cần một camera tự động <b>tìm và đếm thú</b>. Bạn là kỹ sư AI được giao nhiệm vụ.
-          Bạn sẽ đi đúng các bước mà kỹ sư thật làm để tạo ra <b>YOLO</b>, loại AI nhìn hình đang chạy trong xe tự lái và camera an ninh.</p>
+        <div class="intro-zoo" id="intro-zoo" aria-hidden="true">
+          <span>🐶</span><span>🐱</span><span>🐦</span><span>🐮</span><span>🐘</span><span>🦓</span>
+          <div class="zoo-box" id="zoo-box"><b id="zoo-tag"></b></div>
+        </div>
+        <h1><span class="hl">Xưởng AI</span> Động Vật</h1>
+        <p class="lead q">Bạn có bao giờ tự hỏi làm thế nào máy tính có thể nhận biết <b>chó, mèo</b> hay những loài động vật khác chỉ qua <b>một bức ảnh</b>?</p>
+        <p class="lead">Hôm nay, bạn sẽ thử tự tay tạo ra một AI có khả năng <b>nhận diện và đếm số lượng động vật</b>, như những hệ thống đang được dùng trong camera thông minh, xe tự lái hay các ứng dụng AI hiện nay.</p>
         <div class="intro-steps" id="intro-steps"></div>
+        <p class="intro-cta">Bạn sẽ trải nghiệm <b>5 bước</b> để huấn luyện AI của riêng mình. <span class="hl">Sẵn sàng trở thành kỹ sư AI chưa?</span></p>
         <div class="intro-form">
+          <div class="gender" id="intro-gender" role="radiogroup" aria-label="Giới tính">
+            <button type="button" class="gbtn" data-g="m" role="radio" aria-checked="false"><span class="gav"></span>Nam</button>
+            <button type="button" class="gbtn" data-g="f" role="radio" aria-checked="false"><span class="gav"></span>Nữ</button>
+          </div>
           <input id="intro-name" maxlength="30" placeholder="Tên của bạn (để in lên chứng nhận)">
-          <button class="btn primary big" id="intro-go">Bắt đầu nhiệm vụ →</button>
+          <button class="btn primary big shine" id="intro-go">🚀 Bắt đầu tạo AI</button>
         </div>
         <div class="muted small" id="intro-load">Đang tải AI…</div>
       </div>
@@ -65,13 +74,22 @@
     <div class="box-wrap">
       <div class="box-stage">
         <div class="box-head"><span id="bx-title"></span><span class="muted" id="bx-prog"></span></div>
-        <div class="box-canvas-wrap" id="bx-wrap"><img id="bx-img" alt=""><canvas id="bx-cv"></canvas></div>
-        <div class="box-actions">
-          <button class="btn" id="bx-clear">↺ Vẽ lại</button>
-          <button class="btn primary" id="bx-check" disabled>✔ Kiểm tra khung</button>
-          <button class="btn primary" id="bx-next" hidden>Ảnh tiếp →</button>
+        <div class="bx-tabs" id="bx-tabs" hidden>
+          <button class="tab on" data-t="auto">🤖 Máy tự vẽ khung</button>
+          <button class="tab" data-t="seg">✂️ Bo viền (segmentation)</button>
+          <button class="tab" data-t="try">✏️ Tự thử bo viền</button>
         </div>
-        <div class="box-result" id="bx-result"></div>
+        <div class="fit-area box-area" id="bx-area"><div class="box-canvas-wrap" id="bx-wrap"><img id="bx-img" alt=""><canvas id="bx-cv"></canvas></div></div>
+        <div class="bx-panel" id="bx-panel" hidden></div>
+        <div class="bx-labels" id="bx-labels" hidden></div>
+        <div class="box-foot" id="bx-foot">
+          <div class="box-actions">
+            <button class="btn" id="bx-clear">↺ Vẽ lại</button>
+            <button class="btn primary" id="bx-check" disabled>✔ Kiểm tra khung</button>
+            <button class="btn primary" id="bx-next" hidden>Ảnh tiếp →</button>
+          </div>
+          <div class="box-result" id="bx-result"></div>
+        </div>
       </div>
       <aside class="side">
         <h3>🎯 Khung được chấm thế nào?</h3>
@@ -88,20 +106,30 @@
   <!-- 3. Chuẩn bị dữ liệu -->
   <section class="screen" id="s-prep" hidden>
     <div class="prep-grid">
-      <div class="panel">
-        <h3>① Chia ảnh: phần để học, phần để kiểm tra</h3>
-        <p class="muted small">Giống như ôn tập và đi thi: AI <b>học</b> trên một phần ảnh, rồi được <b>chấm điểm</b> trên phần còn lại, là những ảnh nó chưa từng thấy.</p>
-        <div class="split-tiles" id="pp-tiles"></div>
+      <div class="panel prep-split">
+        <h3 class="numh"><span class="num">1</span>Chia ảnh: phần để học, phần để kiểm tra</h3>
+        <p class="muted small">Giống như ôn tập và đi thi: AI <b>học</b> trên một phần ảnh, rồi được <b>chấm điểm</b> trên phần còn lại, là những ảnh nó chưa từng thấy. Bộ mẫu có <b id="pp-n">100</b> ảnh.</p>
+        <div class="fit-area"><div class="split-tiles" id="pp-tiles"></div></div>
         <input type="range" id="pp-split" min="50" max="95" step="5" value="80">
         <div class="split-legend"><span class="tr">■ Để học <b id="pp-tr"></b></span><span class="va">■ Để kiểm tra <b id="pp-va"></b></span></div>
         <div class="warn" id="pp-warn"></div>
       </div>
-      <div class="panel">
-        <h3>② Nhân bản ảnh: 1 ảnh biến thành nhiều ảnh</h3>
-        <p class="muted small">Ít ảnh quá thì AI học không giỏi. Mẹo: lật, đổi màu, phóng to, ghép ảnh để có thêm ảnh mới mà không cần chụp thêm.</p>
+      <div class="panel prep-aug">
+        <h3 class="numh"><span class="num">2</span>Tăng cường dữ liệu ảnh: 1 ảnh biến thành nhiều ảnh</h3>
+        <p class="muted small">Ít ảnh quá thì AI học không giỏi. Mẹo: lật, đổi màu, phóng to, ghép ảnh để có thêm ảnh mới mà không cần chụp thêm. <b>Bấm vào từng thẻ</b> để so sánh ảnh gốc với ảnh sau khi biến đổi, bấm <b>công tắc</b> để bật/tắt.</p>
         <div class="aug-toggles" id="pp-augs"></div>
-        <div class="aug-grid" id="pp-grid"></div>
-        <div class="aug-foot"><button class="btn" id="pp-reroll">🎲 Xem ảnh khác</button><div class="big-num"><span id="pp-total">0</span><span></span></div></div>
+        <div class="fit-area" id="pp-cmpwrap"><div class="cmp" id="pp-cmp">
+          <figure><canvas id="pp-orig" width="320" height="320"></canvas><figcaption>Ảnh gốc</figcaption></figure>
+          <div class="cmp-arrow">➜</div>
+          <figure><canvas id="pp-aug" width="320" height="320"></canvas><figcaption id="pp-augcap"></figcaption></figure>
+        </div></div>
+        <div class="fit-area" id="pp-gridwrap" hidden><div class="aug-grid" id="pp-grid"></div></div>
+        <div class="aug-foot">
+          <div class="aug-nav" id="pp-nav"><button class="btn" id="pp-prev" title="Ảnh trước">‹</button><span class="muted small" id="pp-pos"></span><button class="btn" id="pp-next" title="Ảnh sau">›</button></div>
+          <button class="btn" id="pp-reroll">🎲 Biến đổi khác</button>
+          <button class="btn" id="pp-all" title="Xem 6 ảnh trộn mọi kiểu đang bật, giống lúc AI học">✨ Kết hợp</button>
+          <div class="big-num"><span id="pp-total">0</span><span></span></div>
+        </div>
       </div>
     </div>
   </section>
@@ -110,28 +138,45 @@
   <section class="screen" id="s-train" hidden>
     <div class="train-top">
       <div class="opt-group"><label>AI bắt đầu từ đâu?</label><div class="seg" id="tr-init"></div></div>
-      <div class="opt-group"><label>Số vòng học</label><div class="seg" id="tr-ep"></div></div>
-      <div class="opt-group"><label>Nhân bản ảnh</label><div class="seg" id="tr-aug"></div></div>
+      <div class="opt-group"><label>Số vòng học (epoch)</label><div class="seg" id="tr-ep"></div></div>
+      <div class="opt-group"><label>Tăng cường dữ liệu</label><div class="seg" id="tr-aug"></div></div>
       <button class="btn primary big" id="tr-go">▶ Huấn luyện</button>
     </div>
     <div class="train-grid">
-      <div class="panel">
-        <h3>AI học như thế nào? <span class="muted small" id="tr-epoch"></span></h3>
-        <div class="net" id="tr-net"></div>
+      <div class="panel tr-col tr-live">
+        <h3>🔍 Soi quá trình học <span class="muted small" id="tr-epoch"></span></h3>
+        <!-- băng chuyền: ảnh học trôi qua "cổng AI" theo từng lô -->
+        <div class="belt">
+          <div class="belt-win"><div class="belt-track" id="tr-belt"></div><div class="belt-gate"><span>🤖 AI đang xem 1 lô</span></div></div>
+          <div class="belt-info" id="tr-beltinfo"></div>
+        </div>
+        <!-- soi 1 ảnh: đoán → so đáp án → tự sửa -->
+        <div class="spot-row">
+          <div class="fit-area spot-area" id="tr-spotarea"><canvas id="tr-spot"></canvas></div>
+          <div class="phases" id="tr-phases">
+            <span class="ph" data-p="1"><span class="num">1</span><span>Nhìn &amp; đoán<span class="fmaps"><canvas class="fm"></canvas><canvas class="fm"></canvas><canvas class="fm"></canvas></span></span></span>
+            <i class="ph-arrow"></i>
+            <span class="ph" data-p="2"><span class="num">2</span><span>So đáp án<small>đo độ lệch</small></span></span>
+            <i class="ph-arrow"></i>
+            <span class="ph" data-p="3"><span class="num">3</span><span>Tự sửa<canvas class="knobs" id="tr-knobs" width="48" height="16"></canvas></span></span>
+            <i class="ph-loop">⟲ lặp lại mỗi epoch</i>
+          </div>
+        </div>
+        <div class="spot-cap" id="tr-cap"></div>
       </div>
-      <div class="panel">
-        <h3>Mức sai: càng thấp càng tốt</h3>
+      <div class="panel tr-col">
+        <h3>Loss <span class="muted small">(mức sai): càng thấp càng tốt</span></h3>
         <canvas id="tr-loss" height="170"></canvas>
-        <h3>Điểm của AI: càng cao càng tốt</h3>
+        <h3>mAP50 <span class="muted small">(điểm của AI): càng cao càng tốt</span></h3>
         <canvas id="tr-map" height="150"></canvas>
+        <div class="hist" id="tr-hist" hidden><h3>📊 So sánh các lần huấn luyện</h3><div class="hist-scroll"><table id="tr-table"></table></div></div>
       </div>
-      <div class="panel">
+      <div class="panel tr-col">
         <h3>AI đoán trên ảnh kiểm tra</h3>
-        <div class="val-grid" id="tr-val"></div>
+        <div class="fit-area"><div class="val-grid" id="tr-val"></div></div>
         <div id="tr-result"></div>
       </div>
     </div>
-    <div class="panel hist" id="tr-hist" hidden><h3>📊 So sánh các lần huấn luyện</h3><table id="tr-table"></table></div>
   </section>
 
   <!-- 5. Nhận diện -->
@@ -144,7 +189,7 @@
           <div class="muted">hoặc <button class="link" id="dt-pick">chọn file</button> · hoặc copy ảnh trên mạng rồi nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd></div>
         </div>
         <div class="det-view" id="dt-view" hidden>
-          <canvas id="dt-cv"></canvas>
+          <div class="det-area" id="dt-area"><canvas id="dt-cv"></canvas></div>
           <video id="dt-video" muted playsinline loop hidden></video>
           <div class="det-bar">
             <button class="btn" id="dt-play" hidden>⏸</button>
@@ -159,13 +204,12 @@
         <h3>🔎 AI tìm thấy</h3>
         <div class="counts" id="dt-counts"><span class="muted">Chưa có ảnh</span></div>
         <h3>⚙ Tuỳ chỉnh</h3>
-        <label class="small">AI phải chắc chắn ít nhất: <b id="dt-conf-v"></b></label>
+        <label class="small conf-label">AI phải chắc chắn ít nhất: <b id="dt-conf-v"></b></label>
         <input type="range" id="dt-conf" min="5" max="95" value="35">
         <div class="muted small">Bật hoặc tắt loài muốn tìm:</div>
         <div class="chips" id="dt-chips"></div>
         <h3>🏅 Thử thách</h3>
         <ul class="missions" id="dt-missions"></ul>
-        <button class="btn primary" id="dt-finish">🎓 Nhận chứng nhận</button>
       </aside>
     </div>
   </section>
@@ -182,6 +226,13 @@
   <button class="btn primary" id="btn-next" disabled>Tiếp tục →</button>
 </footer>
 
+<div class="lightbox" id="lightbox" hidden>
+  <div class="lbx-card">
+    <div class="lbx-head"><b id="lbx-title"></b><span class="muted small" id="lbx-count"></span><div class="seg" id="lbx-modes"></div><button class="icon" id="lbx-close" title="Đóng (Esc)">✕</button></div>
+    <div class="lbx-body"><button class="lbx-nav" id="lbx-prev" title="Ảnh trước (←)">‹</button><div class="lbx-area" id="lbx-area"><canvas id="lbx-cv"></canvas></div><button class="lbx-nav" id="lbx-next" title="Ảnh sau (→)">›</button></div>
+    <div class="lbx-cap" id="lbx-cap"></div>
+  </div>
+</div>
 <canvas id="confetti"></canvas>
 <div id="toasts"></div>
 <script src="vendor/ort/ort.wasm.min.js"></script>

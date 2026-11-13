@@ -16,6 +16,10 @@ export const ALL_CLASSES = {
 // Chỉ dùng những lớp này trong buổi học (thêm/bớt tên ở đây). Nên 4–8 lớp.
 export const ACTIVE = ["dog", "cat", "bird", "cow", "elephant", "zebra"];
 
+// Tổng số ảnh mẫu của bộ dữ liệu (chia đều cho các lớp đang dùng) — 100 cho dễ chia 80/20.
+// Muốn đủ ảnh cho lớp mới: chạy _tools/build_extra.py sau khi sửa ACTIVE.
+export const SAMPLE_TOTAL = 100;
+
 // Số ảnh mỗi lớp cho bước gắn nhãn, và số ảnh "bẫy" trộn vào.
 export const LABEL_PER_CLASS = 4;
 export const TRASH_COUNT = 3;

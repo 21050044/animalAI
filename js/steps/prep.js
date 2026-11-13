@@ -1,30 +1,34 @@
-// Bước 3 — Chuẩn bị ảnh: chia phần học / phần kiểm tra, rồi nhân bản ảnh (lật, đổi màu, phóng, ghép 4).
+// Bước 3 — Chuẩn bị ảnh: chia phần học / phần kiểm tra, rồi tăng cường dữ liệu ảnh (lật, đổi màu, phóng, ghép 4).
+// Mỗi kiểu tăng cường có chế độ so sánh ẢNH GỐC ↔ ẢNH SAU BIẾN ĐỔI; thẻ "Kết hợp" xem 6 ảnh trộn mọi kiểu đang bật.
 import { S, $, h, imgUrl, loadImg, shuffle, rng } from "../state.js";
 import { byKey } from "../config.js";
 import { sfx } from "../fx.js";
 
 let ctx, imgs = new Map(), order = [], seed = 7, inited = false;
+let view = "flip", pos = 0; // view: một kiểu tăng cường | "all"
 
 const AUGS = [
-  { k: "flip", icon: "↔️", vi: "Lật ngang", why: "Chó quay trái hay phải vẫn là chó" },
-  { k: "hsv", icon: "🎨", vi: "Đổi màu / độ sáng", why: "Ảnh chụp lúc trời tối hay nắng gắt" },
-  { k: "scale", icon: "🔍", vi: "Phóng to / thu nhỏ", why: "Con vật ở xa, ở gần, ở góc ảnh" },
-  { k: "mosaic", icon: "🧩", vi: "Ghép 4 ảnh", why: "Nhiều con, nhiều cảnh trong 1 ảnh" },
+  { k: "flip", icon: "↔️", vi: "Lật ngang", why: "Chó quay trái hay phải vẫn là chó", after: "Sau khi lật ngang" },
+  { k: "hsv", icon: "🎨", vi: "Đổi màu / độ sáng", why: "Ảnh chụp lúc trời tối hay nắng gắt", after: "Sau khi đổi màu, độ sáng" },
+  { k: "scale", icon: "🔍", vi: "Phóng to / thu nhỏ", why: "Con vật ở xa, ở gần, ở góc ảnh", after: "Sau khi phóng / thu, dịch ảnh" },
+  { k: "mosaic", icon: "🧩", vi: "Ghép 4 ảnh", why: "Nhiều con, nhiều cảnh trong 1 ảnh", after: "Sau khi ghép với 3 ảnh khác" },
 ];
 
 async function preload() {
   await Promise.all(S.pool.map(async (it) => { if (!imgs.has(it.file)) imgs.set(it.file, await loadImg(imgUrl(it.file))); }));
 }
+const trainItems = () => { const t = (S.trainFiles || []).map((f) => S.pool.find((x) => x.file === f)).filter(Boolean); return t.length ? t : S.pool; };
 
-// ---------- ① chia dữ liệu ----------
+// ---------- 1. chia dữ liệu ----------
 function renderSplit() {
   const p = S.prep.split, n = order.length, ntr = Math.round((n * p) / 100);
   const tiles = $("#pp-tiles");
   if (tiles.children.length !== n) {
     tiles.innerHTML = "";
-    order.forEach((it) => tiles.append(h("div", { class: "tile" }, h("img", { src: imgUrl(it.file) }))));
+    order.forEach((it) => tiles.append(h("div", { class: "tile", title: byKey(it.cls).vi }, h("img", { src: imgUrl(it.file) }))));
   }
   [...tiles.children].forEach((t, i) => t.classList.toggle("val", i >= ntr));
+  $("#pp-n").textContent = n;
   $("#pp-tr").textContent = `${p}% · ${ntr} ảnh`;
   $("#pp-va").textContent = `${100 - p}% · ${n - ntr} ảnh`;
   const w = $("#pp-warn");
@@ -33,17 +37,21 @@ function renderSplit() {
   w.className = "warn " + (p >= 95 || p <= 60 ? "bad" : "ok");
   S.trainFiles = order.slice(0, ntr).map((x) => x.file);
   S.valFiles = order.slice(ntr).map((x) => x.file);
-  renderTotal();
+  pos = Math.min(pos, ntr - 1);
+  renderTotal(); renderView();
 }
 
-// ---------- ② nhân bản ảnh ----------
+// ---------- 2. tăng cường dữ liệu ảnh ----------
 function renderAugToggles() {
   const el = $("#pp-augs"); el.innerHTML = "";
   for (const a of AUGS) {
     const on = S.prep.augs[a.k];
-    el.append(h("button", { class: `aug ${on ? "on" : ""}`, onclick: () => { S.prep.augs[a.k] = !S.prep.augs[a.k]; sfx.blip(); renderAugToggles(); renderGrid(); renderTotal(); } },
-      h("span", { class: "ai" }, a.icon), h("span", {}, h("b", {}, a.vi), h("span", { class: "muted small" }, a.why)), h("span", { class: "sw2" }, on ? "BẬT" : "TẮT")));
+    const sw = h("span", { class: `sw ${on ? "on" : ""}`, title: on ? "Đang bật: bấm để tắt" : "Đang tắt: bấm để bật", role: "switch" }, h("i"));
+    sw.onclick = (e) => { e.stopPropagation(); S.prep.augs[a.k] = !S.prep.augs[a.k]; sfx.blip(); renderAugToggles(); renderTotal(); renderView(); };
+    el.append(h("button", { class: `aug ${on ? "on" : ""} ${view === a.k ? "view" : ""}`, title: "Bấm để xem ảnh gốc và ảnh sau biến đổi", onclick: () => { view = a.k; sfx.blip(); renderAugToggles(); renderView(); } },
+      h("span", { class: "ai" }, a.icon), sw, h("b", {}, a.vi), h("span", { class: "muted small" }, a.why)));
   }
+  $("#pp-all").classList.toggle("on", view === "all");
 }
 
 function place(g, im, boxes, region, s, tx, ty, flip, T, filter) {
@@ -67,42 +75,60 @@ function place(g, im, boxes, region, s, tx, ty, flip, T, filter) {
   return out;
 }
 
-function renderTile(c, r) {
+/** vẽ 1 ảnh vuông. A = các kiểu bật; first = ảnh chính (nếu có) */
+function renderTile(c, r, A, first = null, tags = true) {
   const T = c.width, g = c.getContext("2d");
-  const A = S.prep.augs;
   g.fillStyle = "#727272"; g.fillRect(0, 0, T, T);
-  const train = (S.trainFiles || []).map((f) => S.pool.find((x) => x.file === f)).filter(Boolean);
-  const src = train.length ? train : S.pool;
+  const src = trainItems();
   const pick = () => src[Math.floor(r() * src.length)];
-  const flt = () => (A.hsv ? `hue-rotate(${Math.round((r() - 0.5) * 40)}deg) saturate(${(0.5 + r() * 1.1).toFixed(2)}) brightness(${(0.6 + r() * 0.8).toFixed(2)})` : "none");
-  const sc = () => (A.scale ? 0.75 + r() * 0.6 : 1), tr = () => (A.scale ? (r() - 0.5) * 0.3 : 0);
-  const flip = A.flip && r() < 0.5;
+  const flt = () => (A.hsv ? `hue-rotate(${Math.round((r() - 0.5) * 50)}deg) saturate(${(0.45 + r() * 1.2).toFixed(2)}) brightness(${(0.55 + r() * 0.9).toFixed(2)})` : "none");
+  const sc = () => (A.scale ? 0.7 + r() * 0.7 : 1), tr = () => (A.scale ? (r() - 0.5) * 0.35 : 0);
+  const flip = !!A.flip && (first ? true : r() < 0.5);
   let boxes = [];
-  const tags = [];
+  const tg = [];
   if (A.mosaic) {
     const mx = T * (0.3 + r() * 0.4), my = T * (0.3 + r() * 0.4);
     const regs = [{ x: 0, y: 0, w: mx, h: my }, { x: mx, y: 0, w: T - mx, h: my }, { x: 0, y: my, w: mx, h: T - my }, { x: mx, y: my, w: T - mx, h: T - my }];
-    for (const rg of regs) { const it = pick(); boxes.push(...place(g, imgs.get(it.file), [{ box: it.box, cls: it.cls }], rg, sc(), tr(), tr(), flip, T, flt())); }
-    tags.push("🧩");
+    regs.forEach((rg, i) => { const it = i === 0 && first ? first : pick(); boxes.push(...place(g, imgs.get(it.file), [{ box: it.box, cls: it.cls }], rg, sc(), tr(), tr(), flip, T, flt())); });
+    tg.push("🧩");
   } else {
-    const it = pick();
+    const it = first || pick();
     boxes = place(g, imgs.get(it.file), [{ box: it.box, cls: it.cls }], { x: 0, y: 0, w: T, h: T }, sc(), tr(), tr(), flip, T, flt());
   }
-  if (flip) tags.push("↔️");
-  g.lineWidth = 2.5; g.font = "bold 12px system-ui";
+  if (flip) tg.push("↔️");
+  g.lineWidth = Math.max(2.5, T / 110); g.font = `bold ${Math.round(T / 18)}px system-ui`;
   for (const b of boxes) {
-    const c2 = byKey(b.cls);
+    const c2 = byKey(b.cls), s = T / 13;
     g.strokeStyle = c2.color; g.strokeRect(b.x, b.y, b.w, b.h);
-    g.fillStyle = c2.color; g.fillRect(b.x, b.y, 22, 18); g.fillText(c2.emoji, b.x + 3, b.y + 14);
+    g.fillStyle = c2.color; g.fillRect(b.x, b.y, s * 1.3, s); g.fillText(c2.emoji, b.x + 3, b.y + s * 0.8);
   }
-  if (tags.length) { g.font = "16px system-ui"; g.fillText(tags.join(""), T - 24 * tags.length - 2, T - 8); }
+  if (tags && tg.length) { g.font = `${Math.round(T / 14)}px system-ui`; g.fillText(tg.join(""), T - (T / 12) * tg.length - 4, T - 8); }
+}
+
+function renderCompare() {
+  const src = trainItems();
+  const it = src[pos % src.length];
+  const a = AUGS.find((x) => x.k === view);
+  renderTile($("#pp-orig"), rng(1), {}, it, false);
+  renderTile($("#pp-aug"), rng(seed * 31 + pos), { [view]: true }, it, false);
+  const on = S.prep.augs[view];
+  $("#pp-augcap").innerHTML = `${a.icon} ${a.after}${on ? "" : ' <span class="off-tag">đang tắt</span>'}`;
+  $("#pp-pos").textContent = `Ảnh ${(pos % src.length) + 1}/${src.length}`;
 }
 
 function renderGrid() {
   const grid = $("#pp-grid");
-  if (!grid.children.length) for (let i = 0; i < 6; i++) { const c = h("canvas"); c.width = c.height = 220; grid.append(c); }
+  if (!grid.children.length) for (let i = 0; i < 6; i++) { const c = h("canvas"); c.width = c.height = 260; grid.append(c); }
   const r = rng(seed);
-  [...grid.children].forEach((c) => renderTile(c, r));
+  [...grid.children].forEach((c) => renderTile(c, r, S.prep.augs));
+}
+
+function renderView() {
+  const all = view === "all";
+  $("#pp-cmpwrap").hidden = all; $("#pp-gridwrap").hidden = !all; $("#pp-nav").hidden = all;
+  $("#pp-reroll").textContent = all ? "🎲 Ảnh khác" : "🎲 Biến đổi khác";
+  $("#pp-all").textContent = all ? "← Từng kiểu" : "✨ Kết hợp";
+  if (all) renderGrid(); else renderCompare();
 }
 
 function renderTotal() {
@@ -110,14 +136,14 @@ function renderTotal() {
   const on = Object.values(S.prep.augs).filter(Boolean).length;
   const mult = [1, 4, 12, 40, 120][on];
   $("#pp-total").textContent = (n * mult).toLocaleString("vi-VN");
-  $("#pp-total").parentElement.lastChild.textContent = on ? ` ảnh khác nhau tạo ra từ ${n} ảnh gốc` : ` ảnh (không nhân bản: AI dễ học vẹt!)`;
+  $("#pp-total").parentElement.lastChild.textContent = on ? ` ảnh khác nhau tạo ra từ ${n} ảnh gốc` : ` ảnh (không tăng cường: AI dễ học vẹt!)`;
 }
 
 export default {
-  id: "prep", icon: "🧪", title: "Chuẩn bị ảnh",
-  blurb: "Chia ảnh và nhân bản ảnh",
-  hint: "Thử bật/tắt các kiểu nhân bản để xem ảnh thay đổi, rồi bấm Tiếp tục.",
-  guide: { title: "Bước 3: Chuẩn bị ảnh cho AI học", text: "Trước khi học, ảnh được <b>chia</b> làm hai phần (để học và để kiểm tra) rồi <b>nhân bản</b> để AI thấy nhiều tình huống hơn. Mọi thứ đã đặt sẵn hợp lý. Thử <b>bật/tắt</b> từng kiểu nhân bản xem ảnh thay đổi ra sao!" },
+  id: "prep", icon: "🧪", title: "Chuẩn bị dữ liệu",
+  blurb: "Sắp xếp ảnh để AI học",
+  hint: "Bấm từng thẻ để so sánh ảnh gốc và ảnh sau biến đổi, rồi bấm Tiếp tục.",
+  guide: { title: "Bước 3: Chuẩn bị dữ liệu cho AI học", text: "Trước khi học, ảnh được <b>chia</b> làm hai phần (để học và để kiểm tra) rồi được <b>tăng cường</b> (biến đổi thành nhiều ảnh mới) để AI thấy nhiều tình huống hơn. <b>Bấm vào từng thẻ</b> để xem ảnh gốc biến thành ảnh mới ra sao!" },
   async enter(c) {
     ctx = c;
     await preload();
@@ -125,11 +151,13 @@ export default {
       inited = true;
       order = shuffle(S.pool, rng(3));
       $("#pp-split").oninput = (e) => { S.prep.split = +e.target.value; renderSplit(); };
-      $("#pp-reroll").onclick = () => { seed++; sfx.whoosh(); renderGrid(); };
-      window.addEventListener("resize", () => {});
+      $("#pp-reroll").onclick = () => { seed++; sfx.whoosh(); renderView(); };
+      $("#pp-all").onclick = () => { view = view === "all" ? "flip" : "all"; sfx.blip(); renderAugToggles(); renderView(); };
+      $("#pp-prev").onclick = () => { const n = trainItems().length; pos = (pos - 1 + n) % n; sfx.blip(); renderCompare(); };
+      $("#pp-next").onclick = () => { pos = (pos + 1) % trainItems().length; sfx.blip(); renderCompare(); };
     }
     $("#pp-split").value = S.prep.split;
-    renderSplit(); renderAugToggles(); renderGrid();
+    renderAugToggles(); renderSplit();
     ctx.complete("Ảnh đã sẵn sàng! Tiếp theo: cho AI học.");
   },
 };
