@@ -191,6 +191,7 @@ h3.numh { display: flex; align-items: center; gap: 10px; }
 .bucket { --c: #94a3b8; background: color-mix(in srgb, var(--c) 8%, #fff); border: 2px dashed color-mix(in srgb, var(--c) 75%, #6b7280); color: var(--tx); border-radius: 16px; padding: 8px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; position: relative; transition: .15s; }
 .bucket .be { font-size: 28px; line-height: 1.2; } .bucket .bn { font-weight: 700; }
 .bucket .bc { position: absolute; top: 6px; right: 8px; background: var(--c); color: #0b1220; font-weight: 800; border-radius: 999px; min-width: 22px; font-size: 12px; padding: 0 6px; }
+.bucket .bk { position: absolute; top: 6px; left: 8px; background: #fff; border: 1.5px solid color-mix(in srgb, var(--c) 75%, #6b7280); color: var(--tx); font-weight: 800; border-radius: 6px; min-width: 22px; font-size: 12px; line-height: 18px; text-align: center; }
 .bucket:hover, .bucket.hover { border-style: solid; background: color-mix(in srgb, var(--c) 24%, #fff); transform: translateY(-3px); }
 .bucket.trash { --c: #f87171; }
 .bucket.bump { animation: bump .35s; }

@@ -18,11 +18,14 @@ function buildQueue() {
 
 function renderBuckets() {
   const wrap = $("#lb-buckets"); wrap.innerHTML = "";
+  let n = 0;
   for (const c of classes()) {
     wrap.append(h("button", { class: "bucket", "data-k": c.key, style: `--c:${c.color}`, onclick: () => assign(c.key) },
+      h("span", { class: "bk" }, String(++n)),
       h("span", { class: "be" }, c.emoji), h("span", { class: "bn" }, c.vi), h("span", { class: "bc" }, "0")));
   }
   wrap.append(h("button", { class: "bucket trash", "data-k": "trash", onclick: () => assign("trash") },
+    h("span", { class: "bk" }, String(++n)),
     h("span", { class: "be" }, "🗑️"), h("span", { class: "bn" }, "Loại bỏ"), h("span", { class: "bc" }, "0")));
 }
 
@@ -135,6 +138,20 @@ async function assign(key, cardEl) {
   }
 }
 
+// Phím tắt: bấm 1..7 để chọn nhóm tương ứng (số ghi trên từng nhóm)
+let keysBound = false;
+function bindKeys() {
+  if (keysBound) return; keysBound = true;
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || !queue.length) return;
+    if (e.target.closest?.("input, textarea, select")) return;
+    const stack = $("#lb-stack");
+    if (!stack || !stack.offsetParent) return; // bước này đang ẩn
+    const b = document.querySelectorAll(".bucket")[Number(e.key) - 1];
+    if (b) { e.preventDefault(); assign(b.dataset.k); }
+  });
+}
+
 function finish() {
   sfx.win(); confetti({ count: 100 });
   const st = S.labelStats, n = st.total - st.trash;
@@ -149,10 +166,10 @@ function finish() {
 export default {
   id: "label", icon: "🏷️", title: "Gắn nhãn",
   blurb: "Giúp AI nhận biết từng loài động vật",
-  hint: "Bấm vào nhóm đúng với con vật trong ảnh. Cẩn thận ảnh 'bẫy'!",
+  hint: "Bấm vào nhóm (hoặc nhấn phím số 1–7) đúng với con vật trong ảnh. Cẩn thận ảnh 'bẫy'!",
   guide: { title: "Bước 1: Gắn nhãn cho ảnh", text: "AI học từ ví dụ. Hãy <b>bấm vào đúng nhóm</b> của con vật trong ảnh (hoặc kéo ảnh vào nhóm). Có vài ảnh <b>bẫy</b> không phải con vật thật, hãy kéo chúng vào <b>🗑️ Loại bỏ</b>." },
   enter(c) {
-    ctx = c;
+    ctx = c; bindKeys();
     if (started && !queue.length) return; // đã xong — giữ nguyên
     started = true; wrongTries = 0;
     buildQueue(); renderBuckets(); renderBars(); renderStack();
