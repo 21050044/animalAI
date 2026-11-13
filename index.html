@@ -9,6 +9,7 @@
 </head>
 <body>
 <header class="top">
+  <img class="brand-top" src="logo.png" alt="Trường Đại học Bình Dương · Viện Trí tuệ nhân tạo và Chuyển đổi số">
   <div class="logo" id="logo" title="Nhấp đúp để mở khoá mọi bước (dành cho thầy cô)">🐾 <b>Xưởng AI</b> Động Vật</div>
   <nav class="stepper" id="stepper"></nav>
   <div class="top-right">
@@ -29,6 +30,7 @@
     <div class="intro">
       <div class="intro-bg" aria-hidden="true"><i></i><i></i><i></i><div class="floaters" id="intro-floaters"></div></div>
       <div class="intro-hero">
+        <img class="brand-intro" src="logo.png" alt="Trường Đại học Bình Dương · Viện Trí tuệ nhân tạo và Chuyển đổi số">
         <div class="intro-zoo" id="intro-zoo" aria-hidden="true">
           <span>🐶</span><span>🐱</span><span>🐦</span><span>🐮</span><span>🐘</span><span>🦓</span>
           <div class="zoo-box" id="zoo-box"><b id="zoo-tag"></b></div>
@@ -150,18 +152,15 @@
           <div class="belt-win"><div class="belt-track" id="tr-belt"></div><div class="belt-gate"><span>🤖 AI đang xem 1 lô</span></div></div>
           <div class="belt-info" id="tr-beltinfo"></div>
         </div>
-        <!-- soi 1 ảnh: đoán → so đáp án → tự sửa -->
-        <div class="spot-row">
-          <div class="fit-area spot-area" id="tr-spotarea"><canvas id="tr-spot"></canvas></div>
-          <div class="phases" id="tr-phases">
-            <span class="ph" data-p="1"><span class="num">1</span><span>Nhìn &amp; đoán<span class="fmaps"><canvas class="fm"></canvas><canvas class="fm"></canvas><canvas class="fm"></canvas></span></span></span>
-            <i class="ph-arrow"></i>
-            <span class="ph" data-p="2"><span class="num">2</span><span>So đáp án<small>đo độ lệch</small></span></span>
-            <i class="ph-arrow"></i>
-            <span class="ph" data-p="3"><span class="num">3</span><span>Tự sửa<canvas class="knobs" id="tr-knobs" width="48" height="16"></canvas></span></span>
-            <i class="ph-loop">⟲ lặp lại mỗi epoch</i>
-          </div>
+        <!-- lô ảnh → mô hình → đầu ra (loss) -->
+        <div class="pipe">
+          <div class="pp-col"><div class="pp-box pp-batch" id="tr-batch"></div><span class="ph" data-p="1"><span class="num">1</span><span>Lô ảnh vào</span></span></div>
+          <i class="pp-arrow" id="tr-a1"></i>
+          <div class="pp-col"><div class="pp-box pp-model" id="tr-model"></div><span class="ph" data-p="2"><span class="num">2</span><span>AI xem &amp; đoán</span></span></div>
+          <i class="pp-arrow" id="tr-a2"></i>
+          <div class="pp-col"><div class="pp-box pp-out"><small>Loss (mức sai)</small><b id="tr-lossnow">–</b><span class="pp-lbar"><i id="tr-lossbar"></i></span></div><span class="ph" data-p="3"><span class="num">3</span><span>Đầu ra: loss</span></span></div>
         </div>
+        <div class="pp-loop" id="tr-loop">⟲ Loss cao thì AI tự chỉnh các con số bên trong cho bớt sai, rồi nhận lô ảnh kế tiếp</div>
         <div class="spot-cap" id="tr-cap"></div>
       </div>
       <div class="panel tr-col">

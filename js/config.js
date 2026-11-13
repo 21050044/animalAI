@@ -26,6 +26,8 @@ export const TRASH_COUNT = 3;
 
 // Bước Huấn luyện là MÔ PHỎNG. true = hiện một dòng ghi chú nhỏ cho học sinh biết điều đó.
 export const SHOW_SIM_NOTE = false;
+/** TẠM THỜI (debug): cho phép nhảy thẳng tới bất kỳ bước nào, bỏ qua yêu cầu hoàn thành. Đặt false khi chạy thật. */
+export const DEBUG_SKIP = false;
 
 // Bước Dùng thử: ngưỡng tin cậy mặc định.
 export const DEFAULT_CONF = 0.35;

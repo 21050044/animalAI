@@ -1,4 +1,5 @@
 import { S, loadData, $, h } from "./state.js";
+import { DEBUG_SKIP } from "./config.js";
 import { initAudio, toggleMute, sfx } from "./fx.js";
 import * as yolo from "./yolo.js";
 import label from "./steps/label.js";
@@ -12,7 +13,7 @@ import { avatar } from "./avatar.js";
 
 const STEPS = [label, box, prep, train, detect];
 let cur = -1;            // -1 = giới thiệu, STEPS.length = chứng nhận
-let unlocked = 0;
+let unlocked = DEBUG_SKIP ? STEPS.length - 1 : 0;
 const done = new Set();
 
 // ---------- thanh bước ----------
@@ -64,7 +65,7 @@ async function go(i) {
   $(`#s-${st.id}`).hidden = false;
   $("#bottom").hidden = false;
   $("#btn-prev").disabled = i === 0;
-  $("#btn-next").disabled = !done.has(i);
+  $("#btn-next").disabled = !DEBUG_SKIP && !done.has(i);
   $("#btn-next").textContent = i === STEPS.length - 1 ? "🎓 Nhận chứng nhận →" : "Tiếp tục →";
   $("#bottom-msg").textContent = done.has(i) ? "Bước này đã xong, bạn có thể làm lại hoặc đi tiếp." : st.hint || "";
   setGuide(st.guide);

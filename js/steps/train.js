@@ -1,10 +1,10 @@
 // Bước 4 — Huấn luyện (MÔ PHỎNG trực quan). Kết quả phụ thuộc vào lựa chọn của học sinh
 // và chất lượng nhãn ở bước 1–2. Bước 5 dùng mô hình YOLO11n đã được huấn luyện sẵn trên COCO.
 import { S, $, h, imgUrl, loadImg, sleep, rng, labelQuality } from "../state.js";
-import { paintBox } from "../lightbox.js";
 import { classes, byKey, SHOW_SIM_NOTE } from "../config.js";
 import * as yolo from "../yolo.js";
 import { sfx, confetti, toast } from "../fx.js";
+import { nnPopup as openNN } from "../nnpopup.js";
 
 const MODELS = {
   n: { vi: "Nano", sub: "2,6 triệu tham số", base: 0.8, slow: 1, speed: 1 },
@@ -31,58 +31,24 @@ function renderOpts() {
 
 async function img(f) { if (!imgCache.has(f)) imgCache.set(f, await loadImg(imgUrl(f))); return imgCache.get(f); }
 
-/** bản đồ đặc trưng "thật": lớp 1 = cạnh (Sobel), lớp 2 = cạnh thô, lớp 3 = vùng con vật */
-function featureMaps(im, it, p) {
-  const cs = document.querySelectorAll("#tr-phases .fm");
-  const S0 = 56, t = document.createElement("canvas"); t.width = t.height = S0;
-  const g = t.getContext("2d", { willReadFrequently: true }); g.drawImage(im, 0, 0, S0, S0);
-  const d = g.getImageData(0, 0, S0, S0).data, gray = new Float32Array(S0 * S0);
-  for (let i = 0; i < S0 * S0; i++) gray[i] = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 3;
-  const edge = new Float32Array(S0 * S0);
-  for (let y = 1; y < S0 - 1; y++) for (let x = 1; x < S0 - 1; x++) {
-    const i = y * S0 + x;
-    const gx = gray[i - S0 + 1] + 2 * gray[i + 1] + gray[i + S0 + 1] - gray[i - S0 - 1] - 2 * gray[i - 1] - gray[i + S0 - 1];
-    const gy = gray[i + S0 - 1] + 2 * gray[i + S0] + gray[i + S0 + 1] - gray[i - S0 - 1] - 2 * gray[i - S0] - gray[i - S0 + 1];
-    edge[i] = Math.min(255, Math.hypot(gx, gy) / 3);
-  }
-  const paint = (c, f, color) => {
-    const x = c.getContext("2d"), o = x.createImageData(S0, S0);
-    for (let i = 0; i < S0 * S0; i++) { const v = f(i); o.data[i * 4] = color[0] * v; o.data[i * 4 + 1] = color[1] * v; o.data[i * 4 + 2] = color[2] * v; o.data[i * 4 + 3] = 255; }
-    x.putImageData(o, 0, 0);
-  };
-  paint(cs[0], (i) => edge[i] / 255, [255, 255, 255]);
-  const B = 8; // thô hơn
-  paint(cs[1], (i) => { const x = Math.floor((i % S0) / B) * B, y = Math.floor(i / S0 / B) * B; let s = 0; for (let a = 0; a < B; a++) for (let b = 0; b < B; b++) s += edge[(y + a) * S0 + x + b] || 0; return Math.min(1, s / (B * B * 90)); }, [56, 189, 248]);
-  const [bx, by, bw, bh] = it.box;
-  paint(cs[2], (i) => { const x = (i % S0) / S0, y = Math.floor(i / S0) / S0; const inside = x >= bx && x <= bx + bw && y >= by && y <= by + bh; const dx = (x - (bx + bw / 2)) / (bw / 2 + 0.01), dy = (y - (by + bh / 2)) / (bh / 2 + 0.01); const v = Math.max(0, 1 - Math.hypot(dx, dy) * 0.8); return Math.min(1, (inside ? v : v * 0.3) * p + 0.12 * (1 - p) * ((i * 7919) % 13) / 13); }, [251, 191, 36]);
-}
-
 // ---------- băng chuyền ảnh ----------
 const TH = 30, GAP = 3, COL = TH + GAP, BATCH = 16, ROWS = 2, GATE_X = 56; // mỗi lô 16 ảnh = 8 cột × 2 hàng
 const BCOLS = BATCH / ROWS;
-const belt = { files: [], spot: null };
+const belt = { files: [] };
 function trainItems() {
   const t = (S.trainFiles || []).map((f) => S.pool.find((x) => x.file === f)).filter(Boolean);
   return t.length ? t : S.pool;
 }
-async function buildBelt() {
+function buildBelt() {
   const items = trainItems(), track = $("#tr-belt");
-  // ảnh được soi: ảnh NẰM NGANG, con vật cỡ vừa (cho to, dễ nhìn); đặt ở lô đầu để lô 1 là lúc AI đoán
-  let spot = null;
-  for (const it of items.filter((x) => x.box[2] * x.box[3] > 0.15 && x.box[2] * x.box[3] < 0.55).slice(0, 12)) {
-    const im = await img(it.file);
-    if (im.naturalWidth / im.naturalHeight >= 1.3) { spot = it; break; }
-  }
-  spot = spot || items[0];
-  belt.files = [spot, ...items.filter((x) => x !== spot)];
-  belt.spot = spot;
+  belt.files = items;
   track.innerHTML = "";
   // 2 vòng ảnh nối nhau: hết epoch này là thấy ảnh của epoch sau đang chờ
   for (const it of [...belt.files, ...belt.files]) {
-    track.append(h("div", { class: `bt-th ${it === spot ? "spot" : ""}` }, h("img", { src: imgUrl(it.file), loading: "lazy" })));
+    track.append(h("div", { class: "bt-th" }, h("img", { src: imgUrl(it.file), loading: "lazy" })));
   }
   moveBelt(0, false);
-  $("#tr-beltinfo").innerHTML = `Mỗi lượt AI xem <b>${BATCH} ảnh</b> (1 lô) · 1 epoch = xem hết <b>${items.length} ảnh học</b> · <span class="spot-key">🔍</span> ảnh được soi`;
+  $("#tr-beltinfo").innerHTML = `Mỗi lượt AI xem <b>${BATCH} ảnh</b> (1 lô) · 1 epoch = xem hết <b>${items.length} ảnh học</b>`;
 }
 function moveBelt(batch, animate, ms = 300) {
   const tr = $("#tr-belt");
@@ -97,44 +63,42 @@ function markBatch(batch, acc, r) {
 }
 const clearMarks = () => [...$("#tr-belt").children].forEach((t) => t.classList.remove("ok", "bad"));
 
-// ---------- soi 1 ảnh: đoán → so đáp án → tự sửa ----------
-let spotIm = null, guess = null;
+// ---------- popup giải thích mạng nơ-ron (bấm vào khối 🧠) ----------
+let paused = false;
+const wait = async (ms) => { await sleep(ms); while (paused) await sleep(120); };
+function nnPopup() {
+  const m = MODELS[opt.model];
+  openNN({ vi: m.vi, sub: m.sub, init: opt.init }); // huấn luyện vẫn chạy bình thường phía sau
+}
+
+// ---------- lô ảnh → mô hình → loss ----------
 const lerp = (a, b, t) => a + (b - a) * t;
-function spotSize() {
-  const area = $("#tr-spotarea"), cv = $("#tr-spot");
-  const k = Math.min(area.clientWidth / spotIm.naturalWidth, area.clientHeight / spotIm.naturalHeight);
-  cv.width = Math.max(10, Math.round(spotIm.naturalWidth * k)); cv.height = Math.max(10, Math.round(spotIm.naturalHeight * k));
-}
-/** phase: 0 chưa học / xong, 1 đoán, 2 so đáp án, 3 tự sửa */
-function drawSpot(phase, g0 = guess) {
-  const cv = $("#tr-spot"); if (!spotIm) return;
-  spotSize();
-  const W = cv.width, H = cv.height, g = cv.getContext("2d"), it = belt.spot, c = byKey(it.cls);
-  g.drawImage(spotIm, 0, 0, W, H);
-  if (phase !== 1) paintBox(g, it.box, W, H, "#34d399", `Đáp án: ${c.emoji} ${c.vi}`, { dashed: true, bottom: true, lw: 2.5 });
-  if (!g0) return;
-  const pc = byKey(g0.cls), bx = [g0.x, g0.y, g0.w, g0.h];
-  if (phase === 2) { // vạch nối 4 góc: thấy rõ khung đoán lệch bao nhiêu
-    const [x, y, w, hh] = it.box;
-    g.save(); g.strokeStyle = "#ef4444"; g.lineWidth = 1.6; g.setLineDash([3, 3]);
-    [[g0.x, g0.y, x, y], [g0.x + g0.w, g0.y, x + w, y], [g0.x, g0.y + g0.h, x, y + hh], [g0.x + g0.w, g0.y + g0.h, x + w, y + hh]]
-      .forEach(([a, b, c2, d]) => { g.beginPath(); g.moveTo(a * W, b * H); g.lineTo(c2 * W, d * H); g.stroke(); });
-    g.restore();
-  }
-  paintBox(g, bx, W, H, g0.cls === it.cls ? pc.color : "#ef4444", `AI đoán: ${pc.emoji} ${pc.vi} ${Math.round(g0.conf * 100)}%`, { lw: 3, halo: true, fill: phase === 3 ? 0.12 : 0 });
-}
 function setPhase(p, cap) {
-  document.querySelectorAll("#tr-phases .ph").forEach((el) => el.classList.toggle("act", +el.dataset.p === p));
+  document.querySelectorAll(".pipe .ph").forEach((el) => el.classList.toggle("act", +el.dataset.p === p));
+  $("#tr-model").classList.toggle("think", p === 2);
+  $("#tr-model").classList.toggle("tune", p === 3);
+  $("#tr-a1").classList.toggle("go", p === 1);
+  $("#tr-a2").classList.toggle("go", p === 2);
+  $("#tr-loop").classList.toggle("act", p === 3);
   if (cap != null) $("#tr-cap").innerHTML = cap;
 }
-function knobs(on) {
-  const k = $("#tr-knobs"), g = k.getContext("2d");
-  for (let i = 0; i < 12; i++) for (let j = 0; j < 4; j++) {
-    const v = on ? Math.random() : 0.15;
-    g.fillStyle = `hsl(${260 - v * 120} 80% ${30 + v * 40}%)`; g.fillRect(i * 4, j * 4, 3.4, 3.4);
-  }
+function buildModel() {
+  const m = $("#tr-model"); m.innerHTML = "";
+  m.onclick = nnPopup; m.title = "Bấm để xem bên trong mạng nơ-ron";
+  m.append(h("span", { style: "font-size:30px" }, "🧠"));
+  [4, 5, 4, 3].forEach((n, li) => m.append(h("div", { class: "lay" }, ...Array.from({ length: n }, (_, k) => h("i", { style: `--i:${li + k * 0.3}` })))));
 }
-const iouB = (a, b) => yolo.iou({ x: a[0], y: a[1], w: a[2], h: a[3] }, { x: b[0], y: b[1], w: b[2], h: b[3] });
+function showBatch(b) {
+  const box = $("#tr-batch"); box.innerHTML = "";
+  belt.files.slice(b * BATCH, (b + 1) * BATCH).forEach((it) => box.append(h("img", { src: imgUrl(it.file) })));
+  box.animate([{ transform: "translateX(-46px) scale(1.12)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 260, easing: "ease-out" });
+}
+function showLoss(v, max = 2.6) {
+  const k = Math.max(0, Math.min(1, v / max)), col = k > 0.6 ? "#dc2626" : k > 0.35 ? "#d97706" : "#059669";
+  const b = $("#tr-lossnow"); b.textContent = v.toFixed(2); b.style.color = col;
+  $("#tr-lossbar").style.width = k * 100 + "%"; $(".pp-lbar").style.color = col;
+  const o = document.querySelector(".pp-out"); o.classList.remove("pop"); void o.offsetWidth; o.classList.add("pop");
+}
 
 // ---------- biểu đồ ----------
 function chart(canvas, series, { ymax = 1, ymin = 0, xmax = 10, fmt = (v) => v.toFixed(2) } = {}) {
@@ -219,62 +183,35 @@ async function run() {
   const vcs = vals.map(() => { const c = h("canvas"); c.width = 220; c.height = 165; vgrid.append(c); return c; });
   const ims = await Promise.all(vals.map((v) => img(v.file)));
   vals.forEach((vv, i) => drawVal(vcs[i], ims[i], []));
-  await buildBelt();
-  spotIm = await img(belt.spot.file);
-  const it = belt.spot, gt = it.box, nb = Math.ceil(belt.files.length / BATCH), r = rng(11);
-  const tc = byKey(it.cls), cls = classes();
-  // khung đoán ban đầu: "học từ số 0" thì đoán bừa, "AI đã biết nhìn" thì đã gần đúng
-  const pre = opt.init === "pre";
-  guess = pre ? { x: gt[0] + 0.1, y: Math.max(0, gt[1] - 0.08), w: gt[2] * 0.75, h: gt[3] * 1.1 }
-    : { x: 0.05 + r() * 0.5, y: 0.05 + r() * 0.4, w: 0.2 + r() * 0.25, h: 0.2 + r() * 0.3 };
-  const wrongCls = () => { const o = cls.filter((c) => c.key !== it.cls); return o[Math.floor(r() * o.length)].key; };
-  const fast = Math.min(1100 * m.slow, 32000 / E);
-  for (let e = 1; e <= E; e++) {
+  buildBelt(); buildModel(); showLoss(sim.box[0] + 0.35);
+  const nb = Math.ceil(belt.files.length / BATCH), r = rng(11);
+  const nbE = Math.ceil(belt.files.length / BATCH), fast = Math.max(nbE * 240, Math.min(nbE * 420 * m.slow, 60000 / E));
+  for (let e = 1; e <= E && running; e++) {
     // 2 epoch đầu chiếu chậm để kịp đọc, sau đó chạy nhanh
-    const dur = e === 1 ? 7500 : e === 2 ? 3800 : fast, bd = dur / nb;
+    const dur = e === 1 ? 16000 : e === 2 ? 9000 : fast, bd = dur / nb, slow = bd > 700;
     const p = Math.min(1, sim.map[e - 1] / 0.85), acc = 0.15 + 0.8 * p;
+    const l0 = e > 1 ? sim.box[e - 2] : sim.box[0] + 0.35, l1 = sim.box[e - 1];
     clearMarks(); moveBelt(0, false);
-    // AI đoán trên ảnh đang soi: khung tiến dần về đáp án, tên đúng dần
-    const ok = e > 1 && r() < 0.15 + 0.85 * p;
-    const cur = { x: guess.x, y: guess.y, w: guess.w, h: guess.h, cls: ok ? it.cls : wrongCls(), conf: Math.min(0.97, 0.12 + 0.82 * p) };
-    const v = iouB([cur.x, cur.y, cur.w, cur.h], gt);
-    const px = Math.round(Math.hypot(cur.x + cur.w / 2 - gt[0] - gt[2] / 2, cur.y + cur.h / 2 - gt[1] - gt[3] / 2) * spotIm.naturalWidth);
-    const loss = ((1 - v) * 1.6 + (ok ? 0.1 : 1.3) * (1 - p * 0.5)).toFixed(2);
-    const gc = byKey(cur.cls);
-    featureMaps(spotIm, it, Math.max(0.15, p));
-    const half = Math.ceil(nb / 2);
     for (let b = 0; b < nb && running; b++) {
       $("#tr-epoch").textContent = `· epoch ${e}/${E}`;
-      $("#tr-beltinfo").innerHTML = `<b>Epoch ${e}/${E}</b> · lô ${b + 1}/${nb} · đã xem <b>${Math.min((b + 1) * BATCH, belt.files.length)}/${belt.files.length}</b> ảnh · đoán đúng ~<b>${Math.round(acc * 100)}%</b>`;
+      $("#tr-beltinfo").innerHTML = `<b>Epoch ${e}/${E}</b> · lô ${b + 1}/${nb} · đã xem <b>${Math.min((b + 1) * BATCH, belt.files.length)}/${belt.files.length}</b> ảnh`;
       if (b > 0) moveBelt(b, true, Math.min(450, bd * 0.4));
-      // ảnh đang soi nằm ở lô 1: lô 1 = đoán, các lô giữa = so đáp án, nửa sau = tự sửa
-      if (b === 0) {
-        guess = cur; drawSpot(1); knobs(false);
-        setPhase(1, `AI nhìn ảnh qua nhiều lớp (nét → hình dạng → bộ phận) rồi <b>đoán</b>: đây là <b>${gc.emoji} ${gc.vi}</b> (chắc ${Math.round(cur.conf * 100)}%), nằm trong khung ${ok ? "màu" : "đỏ"}.`);
-      } else if (b < half) {
-        drawSpot(2);
-        setPhase(2, `<b>So với đáp án</b> ${tc.emoji} ${tc.vi}: khung lệch <b>${px}px</b> (khớp ${Math.round(v * 100)}%) · ${ok ? '<b class="okc">đúng tên ✓</b>' : `<b class="badc">sai tên ✗</b> (đoán ${gc.vi})`} → <b>loss</b> (mức sai) của ảnh này = <b>${loss}</b>`);
-      } else if (b === half) {
-        setPhase(3, `<b>Tự sửa</b>: chỉnh <b>${MODELS[opt.model].sub.split(" ")[0]} triệu con số</b> bên trong theo hướng làm loss nhỏ đi, để lần sau khung sát hơn${ok ? "" : " và gọi đúng tên"}.`);
-        // khung trượt dần về phía đáp án
-        // học từ số 0: mỗi lần chỉ nhích một chút và còn chệch nhiều; AI đã biết nhìn thì sửa nhanh
-        const step = pre ? 0.2 + 0.45 * p : 0.04 + 0.2 * p, noise = (1 - p) * (pre ? 0.05 : 0.12);
-        const tgt = { x: lerp(cur.x, gt[0], step) + (r() - 0.5) * noise, y: lerp(cur.y, gt[1], step) + (r() - 0.5) * noise, w: lerp(cur.w, gt[2], step), h: lerp(cur.h, gt[3], step) };
-        const t0 = performance.now(), T = Math.max(250, bd * (nb - b) * 0.8);
-        (function anim() {
-          const k = Math.min(1, (performance.now() - t0) / T), ease = 1 - (1 - k) ** 3;
-          drawSpot(3, { ...cur, x: lerp(cur.x, tgt.x, ease), y: lerp(cur.y, tgt.y, ease), w: lerp(cur.w, tgt.w, ease), h: lerp(cur.h, tgt.h, ease) });
-          knobs(true);
-          if (k < 1) requestAnimationFrame(anim);
-        })();
-        guess = { ...cur, ...tgt };
-        sfx.tick();
-      }
-      await sleep(bd * 0.5);
+      const loss = Math.max(0.2, lerp(l0, l1, (b + 1) / nb) + (r() - 0.5) * 0.06);
+      // ① lô ảnh được bốc ra, đưa vào AI
+      showBatch(b);
+      setPhase(1, `Lô <b>${b + 1}</b> (${Math.min(BATCH, belt.files.length - b * BATCH)} ảnh) được bốc ra khỏi băng chuyền và đưa vào AI.`);
+      await wait(slow ? bd * 0.25 : bd * 0.2);
+      // ② AI nhìn & đoán
+      setPhase(2, `AI nhìn từng ảnh qua nhiều lớp (nét → hình dạng → bộ phận) rồi <b>đoán</b> con gì, nằm ở đâu.`);
+      await wait(slow ? bd * 0.3 : bd * 0.3);
+      // ③ đầu ra: loss; mô hình tự chỉnh
+      showLoss(loss);
+      setPhase(3, `AI đối chiếu với đáp án: lô này sai ở mức <b>loss = ${loss.toFixed(2)}</b>. Rồi AI <b>tự chỉnh ${MODELS[opt.model].sub.split(" ")[0]} triệu con số</b> bên trong để lần sau bớt sai.`);
+      sfx.tick();
+      await wait(slow ? bd * 0.3 : bd * 0.3);
       markBatch(b, acc, r);
-      await sleep(bd * 0.5);
+      await wait(bd * 0.15);
     }
-    // cập nhật số liệu
     chart($("#tr-loss"), [
       { name: "train loss", color: "#0284c7", data: sim.box.slice(0, e) },
       { name: "val loss", color: "#db2777", data: sim.vbox.slice(0, e), dash: true },
@@ -283,11 +220,8 @@ async function run() {
     vals.forEach((vv, i) => drawVal(vcs[i], ims[i], p < 0.15 ? [predictBox(vv, p, r), predictBox(vv, p, r)] : [predictBox(vv, p, r)]));
     if (!opt.aug && e === 22) ctx.status("⚠ val loss (mức sai trên ảnh kiểm tra) đang tăng trở lại: AI bắt đầu học vẹt!");
   }
-  const fv = iouB([guess.x, guess.y, guess.w, guess.h], gt), fok = guess.cls === it.cls;
-  setPhase(0, fv >= 0.7 && fok
-    ? `Xong ${E} epoch! Trên ảnh đang soi, khung đoán đã đi từ chỗ lệch tới <b>sát đáp án</b> (khớp ${Math.round(fv * 100)}%) và gọi đúng tên. Mỗi epoch AI làm 3 việc này với <b>tất cả ${belt.files.length} ảnh học</b>.`
-    : `Xong ${E} epoch nhưng AI vẫn ${fok ? "" : "<b>gọi sai tên</b> và "}khung chỉ khớp <b>${Math.round(fv * 100)}%</b>: ${pre ? "cần học thêm epoch" : "học từ con số 0 với ít ảnh thì tiến bộ rất chậm"}. Thử đổi lựa chọn rồi huấn luyện lại!`);
-  drawSpot(3);
+  setPhase(0, `Xong ${E} epoch! Loss giảm từ <b>${(sim.box[0] + 0.35).toFixed(2)}</b> xuống <b>${sim.box[E - 1].toFixed(2)}</b>: mỗi epoch AI xem <b>tất cả ${belt.files.length} ảnh học</b>, đoán, đo loss rồi tự chỉnh.`);
+  showLoss(sim.box[E - 1]);
   finish(sim);
   running = false; $("#tr-go").disabled = false; $("#tr-go").textContent = "↻ Huấn luyện lại";
 }
@@ -337,19 +271,14 @@ export default {
       inited = true;
       opt.aug = Object.values(S.prep.augs).some(Boolean);
       $("#tr-go").onclick = run;
-      document.querySelectorAll("#tr-phases .fm").forEach((c) => { c.width = c.height = 56; });
-      window.addEventListener("resize", () => { if (!$("#s-train").hidden && !running) drawSpot(guess ? 3 : 0); });
       chart($("#tr-loss"), [], { ymax: 2.6, xmax: opt.ep }); chart($("#tr-map"), [], { xmax: opt.ep, fmt: (v) => Math.round(v * 100) + "%" });
       // đo tốc độ thật của YOLO11n trên máy để hiển thị
       yolo.load().then(async () => { const im = await img(S.pool[0].file); const r = await yolo.detect(im, { classIds: [16] }); S.yoloMs = r.ms; }).catch(() => {});
     }
     renderOpts();
     if (!running) {
-      guess = null;
-      buildBelt().then(() => img(belt.spot.file)).then((im) => {
-        spotIm = im; drawSpot(0); knobs(false);
-        setPhase(0, `Bấm <b>▶ Huấn luyện</b>: băng chuyền đưa từng lô ảnh vào AI. Ảnh <span class="spot-key">🔍</span> này được soi kỹ: AI <b>đoán</b> → <b>so đáp án</b> → <b>tự sửa</b>, lặp lại qua từng epoch.`);
-      });
+      buildBelt(); buildModel(); showLoss(0, 1); $("#tr-lossnow").textContent = "–";
+      setPhase(0, `Bấm <b>▶ Huấn luyện</b>: băng chuyền đưa từng lô ảnh vào AI → AI đoán → ra con số <b>loss</b> (mức sai) → AI tự chỉnh để loss giảm. Lặp lại qua từng epoch.`);
     }
   },
 };

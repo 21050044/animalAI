@@ -38,10 +38,11 @@ export default {
             <h1>Kỹ sư AI Thị giác máy tính</h1>
             <div class="cert-sub">Xưởng AI Động Vật · Trải nghiệm tự tạo AI nhận diện động vật</div>
           </div>
+          <div class="cert-brand"><img src="logo.png" alt="Trường Đại học Bình Dương · Viện Trí tuệ nhân tạo và Chuyển đổi số"></div>
         </div>
         <div class="cert-give"><span>Trao cho</span></div>
         <div class="cert-name">${name}</div>
-        <p class="cert-desc">đã tự tay đi hết 5 bước để tạo ra một AI biết nhận diện <span class="cert-zoo">${classes().map((c) => c.emoji).join(" ")}</span></p>
+        <p class="cert-desc">đã tự tay đi hết 5 bước để tạo ra một AI biết nhận diện động vật</p>
         <div class="cert-steps">${STEPS.map(([k, t]) => `<div class="cs">${icon(k)}<span>${t}</span></div>`).join('<i class="cs-arrow"></i>')}</div>
         <div class="cert-stats">${stats.map(([v, t]) => `<div><b>${v}</b><span>${t}</span></div>`).join("")}</div>
         <div class="cert-take">
