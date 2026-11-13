@@ -432,7 +432,7 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 .cert-kicker { font-size: 13px; letter-spacing: .28em; text-transform: uppercase; color: #b45309; font-weight: 800; }
 .cert-card h1 { margin: 2px 0; font-size: clamp(22px, 3.6vh, 32px); letter-spacing: -.01em; }
 .cert-sub { font-size: 13px; color: var(--mut); }
-/* "Trân trọng trao cho": chữ in hoa giãn, màu đồng, hai vạch trang trí hai bên */
+/* "Trao cho": chữ in hoa giãn, màu đồng, hai vạch trang trí hai bên */
 .cert-give { margin-top: clamp(6px, 1.6vh, 16px); display: flex; align-items: center; justify-content: center; gap: 12px; }
 .cert-give span { font-size: 12.5px; font-weight: 700; letter-spacing: .32em; text-transform: uppercase; color: #b45309; }
 .cert-give::before, .cert-give::after { content: ""; width: 70px; height: 1.5px; background: linear-gradient(90deg, transparent, #d97706); }

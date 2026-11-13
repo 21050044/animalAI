@@ -39,7 +39,7 @@ export default {
             <div class="cert-sub">Xưởng AI Động Vật · Trải nghiệm tự tạo AI nhận diện động vật</div>
           </div>
         </div>
-        <div class="cert-give"><span>Trân trọng trao cho</span></div>
+        <div class="cert-give"><span>Trao cho</span></div>
         <div class="cert-name">${name}</div>
         <p class="cert-desc">đã tự tay đi hết 5 bước để tạo ra một AI biết nhận diện <span class="cert-zoo">${classes().map((c) => c.emoji).join(" ")}</span></p>
         <div class="cert-steps">${STEPS.map(([k, t]) => `<div class="cs">${icon(k)}<span>${t}</span></div>`).join('<i class="cs-arrow"></i>')}</div>
